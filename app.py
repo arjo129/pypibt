@@ -7,6 +7,7 @@ from pypibt import (
     get_scenario,
     is_valid_mapf_solution,
     save_configs_for_visualizer,
+    cost_of_solution
 )
 
 if __name__ == "__main__":
@@ -53,6 +54,7 @@ if __name__ == "__main__":
 
     # validation: True -> feasible solution
     print(f"solved: {is_valid_mapf_solution(grid, starts, goals, plan)}")
+    print(f"cost: {cost_of_solution(starts,plan)}")
 
     # save result
     save_configs_for_visualizer(plan, args.output_file)
