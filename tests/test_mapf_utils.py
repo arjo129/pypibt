@@ -156,3 +156,25 @@ def test_is_valid_mapf_solution():
             [(1, 2), (1, 0)],
         ],
     )
+
+def thick_bresenham_line(p1, p2, grid, thickness=1):
+    x1, y1 = p1
+    x2, y2 = p2
+    print(grid.dtype)
+
+    main_line = np.linspace((x1, y1), (x2, y2), num=max(abs(x2 - x1), abs(y2 - y1)) + 1).astype(int)
+
+    for x, y in main_line:
+        for dx in range(-thickness, thickness + 1):
+            for dy in range(-thickness, thickness + 1):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < grid.shape[0] and 0 <= ny < grid.shape[1]:
+                    if not grid[nx, ny]:  # Obstacle detected
+                        return False#points_to_draw #stop drawing
+    return True
+
+def test_path_smoothing():
+    grid = get_grid("assets/Berlin_1_256.map")
+    print(thick_bresenham_line((40,216), (95, 113), grid, 1))
+
+test_path_smoothing()

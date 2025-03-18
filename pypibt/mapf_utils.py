@@ -218,21 +218,21 @@ def get_non_critical_segment(solution: Config, critical: list[int]) -> list[list
 
 
 def thick_bresenham_line(p1, p2, grid, thickness=1):
-    """Returns True if there is a clear path between p1 and p2 with thickness"""
     x1, y1 = p1
     x2, y2 = p2
+    print(grid.dtype)
 
-    # Generate main Bresenham line
-    main_line = np.linspace((x1, y1), (x2, y2), num=max(abs(x2-x1), abs(y2-y1))+1).astype(int)
+    main_line = np.linspace((x1, y1), (x2, y2), num=max(abs(x2 - x1), abs(y2 - y1)) + 1).astype(int)
 
-    # Check nearby points within the thickness range
     for x, y in main_line:
         for dx in range(-thickness, thickness + 1):
             for dy in range(-thickness, thickness + 1):
-                if 0 <= x + dx < grid.shape[0] and 0 <= y + dy < grid.shape[1]:
-                    if not grid[x + dx, y + dy]:  # Obstacle detected
-                        return False
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < grid.shape[0] and 0 <= ny < grid.shape[1]:
+                    if not grid[nx, ny]:  # Obstacle detected
+                        return False#points_to_draw #stop drawing
     return True
+
 
 def bresenham_line(p1, p2, grid):
     """Returns True if there is a clear line of sight between p1 and p2"""
@@ -275,7 +275,7 @@ def interpolate_positions(start, end, num_steps):
     interpolated = np.linspace([x1, y1], [x2, y2], num=num_steps).astype(int)
     return [(x, y) for x, y in interpolated]
 
-def lazy_theta_smooth_time_aware(path, grid, thickness=1):
+def lazy_theta_smooth_time_aware(path, grid, thickness=2):
     """Smoothes path while keeping the same number of time steps"""
     if len(path) < 3:
         return path  
@@ -301,8 +301,9 @@ def lazy_theta_smooth_time_aware(path, grid, thickness=1):
 
     # Ensure new_path has (x, y, t) format
     new_path = [(x, y, t) for t, (x, y) in enumerate(new_path)]  
-
+    return new_path
     # Ensure same number of waypoints by interpolating
+    """
     final_path = []
     interp_index = 0
 
@@ -321,7 +322,8 @@ def lazy_theta_smooth_time_aware(path, grid, thickness=1):
         else:
             final_path.append(new_path[-1])  
 
-    return final_path
+    return final_path"""
+
 
 from math import sqrt
 
