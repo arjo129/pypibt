@@ -8,7 +8,7 @@ from .mapf_utils import (
     lazy_theta_smooth_time_aware,
     path_length
 )
-from .pibt import PIBT, Node, GraphOn2DPlane, PIBTFromMultiGraph, CollisionChecker
+from .pibt import PIBT, Node, GraphOn2DPlane, PIBTFromMultiGraph, CollisionChecker, ReservationSystem
 
 __all__ = [
     "get_grid",

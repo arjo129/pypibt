@@ -3,7 +3,8 @@ import numpy as np
 from pypibt import get_grid, lazy_theta_smooth_time_aware, path_length
 import re
 import random
-
+import sys
+from shapely.geometry import LineString, Point
 
 
 def _is_straight_line_clear(grid, start, end, critical_section):
@@ -165,6 +166,7 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
         new_path = [(int(x[0]/grid_scale), int(x[1]/grid_scale)) for x in agent_paths[agent]]
         normal_paths[agent] = new_path
     critical_sections = identify_all_critical_regions(normal_paths, obstacles)
+    """
     for agent in agent_paths:
         new_path = [(int(x[0]/grid_scale), int(x[1]/grid_scale)) for x in agent_paths[agent]]
         path_bef += path_length(new_path)
@@ -180,6 +182,7 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
     print("Path length after smoothing: ", path_aft)
     print("Path length reduction: ", path_bef - path_aft)
     print("Path length reduction percentage: ", (path_bef - path_aft) / path_bef * 100, "%")
+    """
     num_agents = len(agent_paths)
     # Define a list of colors for the agents
     colors = [
@@ -207,6 +210,8 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
     current_timestep = 0
     print("Number of agents: ", num_agents)
     num_collisions = 0
+    collision_location = []
+    involved_agents = []
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -230,11 +235,14 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
                     agent_x, agent_y = path[current_timestep]
                     if current_timestep > 0:
                         lines = [(px + grid_scale / 2, py + grid_scale / 2) for px, py in path[:current_timestep+1]]
-                        pygame.draw.lines(screen, (0, 0, 255), False, lines)
+                        if agent_id in involved_agents:
+                            pygame.draw.lines(screen, (255, 0, 0), False, lines)
+                        else:
+                            pygame.draw.lines(screen, (0, 0, 255), False, lines)
 
                     # Overlay critical sections
                     
-                    """
+                    
                     if current_timestep < len(critical_sections):
                         critical_section = critical_sections[current_timestep]
                         for row in range(critical_section.shape[0]):
@@ -243,8 +251,10 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
                                     #print("Critical section at: ", col, row)
                                     x = col * grid_scale
                                     y = row * grid_scale
-                                    pygame.draw.rect(screen, (255, 0, 0, 128), (x, y, grid_scale, grid_scale), border_radius=0)"
-                    """
+                                    surface = pygame.Surface((grid_scale, grid_scale), pygame.SRCALPHA)
+                                    surface.fill((255, 0, 0, 20))  # Red with alpha value
+                                    screen.blit(surface, (x, y))
+
                     agent_circle = pygame.draw.circle(screen, colors[agent_id], (agent_x + grid_scale/2, agent_y + grid_scale/2), 5)
                     for other_agent_id, other_path in agent_paths.items():
                         if agent_id != other_agent_id and current_timestep < len(other_path):
@@ -253,6 +263,12 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
                             if distance < 1:
                                 print(f"Distance between Agent {agent_id} and Agent {other_agent_id} at timestep {current_timestep}: {distance}")
                                 print(f"Warning: Agent {agent_id} is within 1 unit of Agent {other_agent_id} at timestep {current_timestep}")
+                                # Draw a green square at the collision location
+                                collision_x = int((agent_x + other_x) / 2 // grid_scale) * grid_scale
+                                collision_y = int((agent_y + other_y) / 2 // grid_scale) * grid_scale
+                                collision_location.append((collision_x, collision_y))
+                                involved_agents.append(agent_id)
+                                involved_agents.append(other_agent_id)
                                 num_collisions += 1
                     mouse_pos = pygame.mouse.get_pos()
                     if pygame.mouse.get_pressed()[0]:  # Check if left mouse button is pressed

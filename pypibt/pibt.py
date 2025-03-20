@@ -3,7 +3,7 @@ import numpy as np
 from .dist_table import DistTable
 from .mapf_utils import Config, Configs, Coord, Grid, get_neighbors
 import heapq
-
+import shapely
 
 class PIBT:
     def __init__(self, grid: Grid, starts: Config, goals: Config, seed: int = 0):
@@ -113,16 +113,26 @@ class PIBT:
 
 HetConfig = tuple[int, int]
 
+"""
+Every node in a graph has a shape property. The shape property represents the shape of the node in 2D space.
+"""
 class Node:
-    def __init__(self, coord: tuple[float, float], size: float):
-        self.coord = coord
-        self.size = size
+    def __init__(self, shapely_shape: shapely.geometry.Polygon):
+        self.shape = shapely_shape
 
     def is_in_collision(self, other: "Node") -> bool:
         # Check if two square nodes are in collision
-        dx = abs(self.coord[0] - other.coord[0])
-        dy = abs(self.coord[1] - other.coord[1])
-        return dx < (self.size + other.size) / 2 and dy < (self.size + other.size) / 2
+        return self.shape.intersects(other.shape)
+    
+    def visualize(self, screen, color):
+        if 'pygame' not in globals():
+            import pygame
+        # Draw the outline of the polygon by iterating over its edges
+        for i in range(len(self.shape.exterior.coords) - 1):
+            start = self.shape.exterior.coords[i]
+            end = self.shape.exterior.coords[i + 1]
+            pygame.draw.line(screen, color, start, end, 1)
+
 """
 Representation of a nav mesh graph on a 2D plane
 """
@@ -136,6 +146,10 @@ class GraphOn2DPlane:
             for index_b, node_b in enumerate(self.nodes):
                 if index_a != index_b:
                     self.dist_cache[(index_a, index_b)] = self.dijkstra(index_a, index_b)
+
+    def visualize(self, screen, color):
+        for node in self.nodes:
+            node.visualize(screen, color)
 
     def dijkstra(self, start_node_index: int, end_node_index: int) -> float:
         if (start_node_index, end_node_index) in self.dist_cache:
@@ -175,6 +189,7 @@ class GraphOn2DPlane:
 
     def get_neighbors(self, node_index: int) -> list[int]:
         return self.neighbors[node_index]
+    
 
 class CollisionChecker:
     def __init__(self, graphs: list[GraphOn2DPlane]):
@@ -231,13 +246,28 @@ class ReservationSystem:
     def mark_current_state(self, graph_id: int, node_id: int, agent_id: int):
         self.current_state[(graph_id, node_id)] = agent_id
 
-    def check_if_safe_to_proceed(self, graph_id: int, node_id: int) -> bool:
-        # equivalent of vertex 
+    def check_if_safe_to_proceed(self, graph_id: int, node_id: int, from_graph_id, from_node_id) -> bool:
         to_check = self.collision_checker.get_other_blocked_nodes(graph_id, node_id)
+        from_check = self.collision_checker.get_other_blocked_nodes(from_graph_id, from_node_id)
         for node in to_check:
-            #simple
+            #simple vertex check
             if self.next_state[node] != self.nil:
                 return False
+
+        for node in from_check:
+            #simple edge check
+            if self.current_state[node] != self.nil and node in to_check:
+                return False
+        return True
+    
+    def get_currently_blocking_agents(self, graph_id: int, node_id: int) -> list[int]:
+        to_check = self.collision_checker.get_other_blocked_nodes(graph_id, node_id)
+        agents = []
+        for node in to_check:
+            #simple
+            if self.current_state[node] != self.nil:
+                agents.append(self.current_state[node])
+        return agents
             
 
 
@@ -251,59 +281,75 @@ class PIBTFromMultiGraph:
 
         # cache
         self.NIL = self.N  # meaning \bot
-        self.NIL_COORD: Coord = self.grid.shape  # meaning \bot
-        self.occupied_now = np.full(grid.shape, self.NIL, dtype=int)
-        self.occupied_nxt = np.full(grid.shape, self.NIL, dtype=int)
+        self.NIL_COORD: HetConfig = self.collision_checker.get_null()
+        self.reservation_system = ReservationSystem(collision_checker, self.NIL)
 
         # used for tie-breaking
         self.rng = np.random.default_rng(seed)
 
-    def funcPIBT(self, Q_from: Config, Q_to: Config, i: int) -> bool:
+    def funcPIBT(self, Q_from: HetConfig, Q_to: HetConfig, i: int) -> bool:
         # true -> valid, false -> invalid
 
         # get candidate next vertices
-        C = [Q_from[i]] + get_neighbors(self.grid, Q_from[i])
+        C = [Q_from[i]] + self.collision_checker.get_neighbours(Q_from[i])
         self.rng.shuffle(C)  # tie-breaking, randomize
-        C = sorted(C, key=lambda u: self.dist_tables[i].get(u))
+        C = sorted(C, key=lambda u: self.collision_checker.get_distance(u))
 
         # vertex assignment
         for v in C:
             # avoid vertex collision
-            if self.occupied_nxt[v] != self.NIL:
+            if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1]):
                 continue
 
-            j = self.occupied_now[v]
+            #j = self.occupied_now[v]
 
             # avoid edge collision
-            if j != self.NIL and Q_to[j] == Q_from[i]:
-                continue
+            #if j != self.NIL and Q_to[j] == Q_from[i]:
+            #    continue
+            blocking_agents = self.reservation_system.get_currently_blocking_agents(v[0], v[1])
 
             # reserve next location
             Q_to[i] = v
-            self.occupied_nxt[v] = i
+            self.reservation_system.mark_next_state(v[0], v[1], i)
 
             # priority inheritance (j != i due to the second condition)
+            """
             if (
                 j != self.NIL
                 and (Q_to[j] == self.NIL_COORD)
                 and (not self.funcPIBT(Q_from, Q_to, j))
             ):
                 continue
-
+            """
+            found_solution = True
+            agents_affected = set()
+            for agent in blocking_agents:
+                if Q_to[agent] != self.NIL_COORD:
+                    continue
+                if self.funcPIBT(Q_from, Q_to, agent):
+                    found_solution &= True
+                    agents_affected.add(agent)
+                else:
+                    found_solution &= False
+                    break
+            if not found_solution:
+                for agent in agents_affected:
+                    Q_to[agent] = self.NIL_COORD
+                continue
             return True
 
         # failed to secure node
         Q_to[i] = Q_from[i]
-        self.occupied_nxt[Q_from[i]] = i
+        self.reservation_system.mark_next_state(Q_from[i], i)
         return False
 
-    def step(self, Q_from: Config, priorities: list[float]) -> Config:
+    def step(self, Q_from: list[HetConfig], priorities: list[float]) -> HetConfig:
         # setup
         N = len(Q_from)
         Q_to: Config = []
         for i, v in enumerate(Q_from):
             Q_to.append(self.NIL_COORD)
-            self.occupied_now[v] = i
+            self.reservation_system.mark_current_state(v,i)
 
         # perform PIBT
         A = sorted(list(range(N)), key=lambda i: priorities[i], reverse=True)
@@ -313,14 +359,13 @@ class PIBTFromMultiGraph:
 
         # cleanup
         for q_from, q_to in zip(Q_from, Q_to):
-            self.occupied_now[q_from] = self.NIL
-            self.occupied_nxt[q_to] = self.NIL
-
+            self.reservation_system.mark_current_state(Q_from, self.NIL)
+            self.reservation_system.mark_next_state(Q_to, self.NIL)
         return Q_to
 
-    def run(self, max_timestep: int = 1000) -> Configs:
+    def run(self, max_timestep: int = 1000) -> list[HetConfig]:
         # define priorities
-        priorities: list[float] = []
+        priorities: dict[float] = []
         for i in range(self.N):
             priorities.append(self.dist_tables[i].get(self.starts[i]) / self.grid.size)
 
