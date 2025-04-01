@@ -141,11 +141,16 @@ class GraphOn2DPlane:
         self.nodes = nodes
         self.neighbors = neighbors
         self.dist_cache = dict()
+        self.max_num = 0
         # Build distance cache for all pairs of nodes
         for index_a, node_a in enumerate(self.nodes):
             for index_b, node_b in enumerate(self.nodes):
                 if index_a != index_b:
                     self.dist_cache[(index_a, index_b)] = self.dijkstra(index_a, index_b)
+                    self.max_num = max(self.max_num, self.dist_cache[(index_a, index_b)])
+
+    def get_max_num(self):
+        return self.max_num
 
     def visualize(self, screen, color):
         for node in self.nodes:
@@ -204,6 +209,23 @@ class CollisionChecker:
         # now do it naively
         self.precompute_correspondance()
 
+    def get_initial_priorities(self, starts, goals):
+        
+        assert len(starts) == len(self.graphs)
+        assert len(goals) == len(self.graphs)
+        
+        max_dist = 0
+        for g in self.graphs:
+            max_dist = max(max_dist, g.get_max_num())
+
+        priorities = []
+        for start_id in range(len(starts)):
+            graph_id, start_node = starts[start_id]
+            _, end_node = goals[start_id]
+            assert _ == graph_id
+            priorities.append(self.graphs[graph_id].dijkstra(start_node, end_node) / max_dist)
+        return priorities
+        
     def precompute_correspondance(self):
         for graph_id, graph in enumerate(self.graphs):
             for node_index, node in enumerate(graph.nodes):
@@ -220,7 +242,7 @@ class CollisionChecker:
         return self.correspondance_cache[(graph_id, node_id)]
     
     def get_neighbours(self, graph_id: int, node_id: int) -> list[tuple[int, int]]:
-        return self.graphs[graph_id].get_neighbors(node_id)
+        return [(graph_id, g) for g in self.graphs[graph_id].get_neighbors(node_id)]
     
     def get_distance(self, graph_id: int, node_id: int, other_node_id: int) -> float:
         return self.graphs[graph_id].dijkstra(node_id, other_node_id)
@@ -291,14 +313,14 @@ class PIBTFromMultiGraph:
         # true -> valid, false -> invalid
 
         # get candidate next vertices
-        C = [Q_from[i]] + self.collision_checker.get_neighbours(Q_from[i])
+        C = [Q_from[i]] + self.collision_checker.get_neighbours(*Q_from[i])
         self.rng.shuffle(C)  # tie-breaking, randomize
-        C = sorted(C, key=lambda u: self.collision_checker.get_distance(u))
+        C = sorted(C, key=lambda u: self.collision_checker.get_distance(u[0], u[1], self.goals[i][1]))
 
         # vertex assignment
         for v in C:
             # avoid vertex collision
-            if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1]):
+            if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1], Q_from[i][0], Q_from[i][1]):
                 continue
 
             #j = self.occupied_now[v]
@@ -340,7 +362,7 @@ class PIBTFromMultiGraph:
 
         # failed to secure node
         Q_to[i] = Q_from[i]
-        self.reservation_system.mark_next_state(Q_from[i], i)
+        self.reservation_system.mark_next_state(Q_from[i][0], Q_from[i][1], i)
         return False
 
     def step(self, Q_from: list[HetConfig], priorities: list[float]) -> HetConfig:
@@ -349,7 +371,7 @@ class PIBTFromMultiGraph:
         Q_to: Config = []
         for i, v in enumerate(Q_from):
             Q_to.append(self.NIL_COORD)
-            self.reservation_system.mark_current_state(v,i)
+            self.reservation_system.mark_current_state(i,v,i)
 
         # perform PIBT
         A = sorted(list(range(N)), key=lambda i: priorities[i], reverse=True)
@@ -359,15 +381,13 @@ class PIBTFromMultiGraph:
 
         # cleanup
         for q_from, q_to in zip(Q_from, Q_to):
-            self.reservation_system.mark_current_state(Q_from, self.NIL)
-            self.reservation_system.mark_next_state(Q_to, self.NIL)
+            self.reservation_system.mark_current_state(q_from[0], q_from[1], self.NIL)
+            self.reservation_system.mark_next_state(q_to[0], q_to[1], self.NIL)
         return Q_to
 
     def run(self, max_timestep: int = 1000) -> list[HetConfig]:
         # define priorities
-        priorities: dict[float] = []
-        for i in range(self.N):
-            priorities.append(self.dist_tables[i].get(self.starts[i]) / self.grid.size)
+        priorities = self.collision_checker.get_initial_priorities(self.starts, self.goals)
 
         # main loop, generate sequence of configurations
         configs = [self.starts]
