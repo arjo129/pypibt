@@ -183,10 +183,46 @@ while running:
 
     pygame.draw.circle(screen, blue, graph1.get_node_center(node_id), 10)
     pygame.draw.circle(screen, red, graph2.get_node_center(node_id2), 8)
-    
+    # Interpolate between frames for smoother motion
+    if i > 0:
+        prev_node_id, prev_node_id2 = result[(i - 1) % len(result)]
+        prev_node_id = prev_node_id[1]
+        prev_node_id2 = prev_node_id2[1]
+
+        prev_pos1 = graph1.get_node_center(prev_node_id)
+        prev_pos2 = graph2.get_node_center(prev_node_id2)
+        curr_pos1 = graph1.get_node_center(node_id)
+        curr_pos2 = graph2.get_node_center(node_id2)
+
+        for t in range(1, 11):  # Interpolation steps
+            interp_pos1 = (
+                prev_pos1[0] + (curr_pos1[0] - prev_pos1[0]) * t / 10,
+                prev_pos1[1] + (curr_pos1[1] - prev_pos1[1]) * t / 10,
+            )
+            interp_pos2 = (
+                prev_pos2[0] + (curr_pos2[0] - prev_pos2[0]) * t / 10,
+                prev_pos2[1] + (curr_pos2[1] - prev_pos2[1]) * t / 10,
+            )
+
+            screen.fill((0, 0, 0))  # Clear the screen with a black background
+            graph1.visualize(screen, blue)
+            graph2.visualize(screen, red)
+
+            # Draw goals
+            draw_circle_goal(screen, blue, graph1.get_node_center(goal1), 10)
+            draw_circle_goal(screen, red, graph2.get_node_center(goal2), 8)
+
+            # Draw interpolated positions
+            pygame.draw.circle(screen, blue, interp_pos1, 10)
+            pygame.draw.circle(screen, red, interp_pos2, 8)
+
+            pygame.display.flip()
+            pygame.time.delay(50)  # Shorter delay for interpolation
     
     pygame.display.flip()
-    pygame.time.delay(500)
+    #pygame.time.delay(500)
     i += 1
+    if i >= len(result):
+        i = 0
 
 pygame.quit()
