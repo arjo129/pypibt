@@ -323,11 +323,6 @@ class PIBTFromMultiGraph:
             if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1], Q_from[i][0], Q_from[i][1]):
                 continue
 
-            #j = self.occupied_now[v]
-
-            # avoid edge collision
-            #if j != self.NIL and Q_to[j] == Q_from[i]:
-            #    continue
             blocking_agents = self.reservation_system.get_currently_blocking_agents(v[0], v[1])
 
             # reserve next location
