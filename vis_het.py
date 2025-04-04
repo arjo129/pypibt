@@ -51,7 +51,27 @@ def draw_circle_goal(screen, color, center, radius):
     background_color = (0, 0, 0)  # Assuming black background
     pygame.draw.circle(screen, background_color, center, inner_radius)
 
+def draw_triangle_agent(screen, color, center, rotation, size):
+    """
+    Draws a triangle representing an agent, where the tip of the triangle indicates the direction of the front.
 
+    Args:
+        screen: The pygame screen to draw on.
+        color: The color of the triangle.
+        center: The (x, y) coordinates of the triangle's center.
+        rotation: The rotation angle in degrees (0 points up, 90 points right, etc.).
+        size: The size of the triangle (distance from center to tip).
+    """
+    # Calculate the vertices of the triangle
+    tip = (center[0] + size * pygame.math.cos(pygame.math.radians(rotation)),
+           center[1] - size * pygame.math.sin(pygame.math.radians(rotation)))
+    left = (center[0] + size * pygame.math.cos(pygame.math.radians(rotation + 120)),
+            center[1] - size * pygame.math.sin(pygame.math.radians(rotation + 120)))
+    right = (center[0] + size * pygame.math.cos(pygame.math.radians(rotation - 120)),
+             center[1] - size * pygame.math.sin(pygame.math.radians(rotation - 120)))
+
+    # Draw the triangle
+    pygame.draw.polygon(screen, color, [tip, left, right])
 
 class GridMap(GraphOn2DPlane):
     def __init__(self, cell_size: float, num_rows: int, num_cols: int, start: tuple[float]):
@@ -126,6 +146,115 @@ class GridMap(GraphOn2DPlane):
             return row * self.num_cols + col
         else:
             raise ValueError("Row or column index out of bounds")
+
+class GridMapWithRotation(GraphOn2DPlane):
+    def __init__(self, cell_size: float, num_rows: int, num_cols: int, start: tuple[float]):
+        """
+        Initializes a GridMap object.
+
+        Args:
+            cell_size (float): The size of each cell.
+            num_rows (int): The number of rows in the grid.
+            num_cols (int): The number of columns in the grid.
+            start (tuple[float]): The starting position of the grid.
+        """
+        self.cell_size = cell_size
+        self.num_rows = num_rows
+        self.num_cols = num_cols
+        self.start = start
+
+        nodes = []
+        edges = {}
+        self.centers = {}
+        self.rotations = {}
+        rotations = [0, 90, 180, 270]  # Possible rotations in degrees
+
+        for i in range(num_rows):
+            for j in range(num_cols):
+                center_x = start[0] + j * cell_size
+                center_y = start[1] + i * cell_size
+
+                for rotation in rotations:
+                    node = Node(create_centered_box(center_x, center_y, cell_size, cell_size), rotation)
+                    nodes.append(node)
+                    rot_ind = rotations.index(rotation)
+                    node_index = (i * num_cols + j) * len(rotations) + rot_ind
+                    edges[node_index] = []
+                    if rot_ind > 0:
+                        edges[node_index].append(node_index - 1)
+                    else:
+                        edges[node_index].append((i * num_cols + j) * len(rotations) + len(rotations) - 1)
+                    
+                    if rot_ind < len(rotations) - 1:
+                        edges[node_index].append(node_index + 1)
+                    else:
+                        edges[node_index].append((i * num_cols + j) * len(rotations))
+                    
+                    self.centers[node_index] = (center_x, center_y)
+                    self.rotations[node_index] = rotation
+    
+                    # Add edges to neighboring cells with the same rotation
+                    if i > 0:
+                        neighbor_index = ((i - 1) * num_cols + j) * len(rotations) + rot_ind
+                        edges[node_index].append(neighbor_index)
+                    if i < num_rows - 1:
+                        neighbor_index = ((i + 1) * num_cols + j) * len(rotations) + rot_ind
+                        edges[node_index].append(neighbor_index)
+                    if j > 0:
+                        neighbor_index = (i * num_cols + j - 1) * len(rotations) + rot_ind
+                        edges[node_index].append(neighbor_index)
+                    if j < num_cols - 1:
+                        neighbor_index = (i * num_cols + j + 1) * len(rotations) + rot_ind
+                        edges[node_index].append(neighbor_index)
+
+        super().__init__(nodes, edges)
+
+    def get_rotation(self, node_id: int) -> int:
+        """
+        Returns the rotation of the node with the given ID.
+
+        Args:
+            node_id (int): The ID of the node.
+
+        Returns:
+            int: The rotation of the node in degrees.
+        """
+        if 0 <= node_id < len(self.nodes):
+            return self.rotations[node_id]
+        else:
+            raise ValueError("Node ID out of bounds")
+
+    def get_node_center(self, node_id: int) -> tuple[float, float]:
+        """
+        Returns the center coordinates of the node with the given ID.
+
+        Args:
+            node_id (int): The ID of the node.
+
+        Returns:
+            tuple[float, float]: The (x, y) coordinates of the node's center.
+        """
+        if 0 <= node_id < len(self.nodes):
+            return self.centers[node_id]
+        else:
+            raise ValueError("Node ID out of bounds")
+    
+    def get_node_id(self, row: int, col: int, rotation: int) -> int:
+        """
+        Returns the node ID for the given (row, col) coordinate in the grid.
+
+        Args:
+            row (int): The row index.
+            col (int): The column index.
+            rotation (int): The rotation index.
+
+        Returns:
+            int: The node ID corresponding to the (row, col) coordinate.
+        """
+        if 0 <= row < self.num_rows and 0 <= col < self.num_cols and 0 <= rotation < len(self.rotations):
+            return (row * self.num_cols + col) * len(self.rotations) + rotation
+        else:
+            raise ValueError("Row, column, or rotation index out of bounds")
 
 def get_pibt_goals(collision_checker: CollisionChecker, start_coords, end_coords):
     graphs = collision_checker.graphs
