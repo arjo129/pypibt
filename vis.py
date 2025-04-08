@@ -103,7 +103,6 @@ def identify_all_critical_regions(paths, grid):
             for i in range(-1,2):
                 for j in range(-1,2):
                     if x1+i >= 0 and x1+i < grid.shape[1] and y1+j >= 0 and y1+j < grid.shape[0] and grid[y1+j, x1+i]:
-                        print("Marking: ", agent, x1+i, y1+j)
                         to_mark1.append((x1+i, y1+j))
             agent_unsafe_zones.append(set(to_mark1))
         print(len(agent_unsafe_zones))
@@ -112,7 +111,6 @@ def identify_all_critical_regions(paths, grid):
             for j in range(i+1, len(agent_unsafe_zones)):
                 if agent_unsafe_zones[i].intersection(agent_unsafe_zones[j]):
                     for coord in agent_unsafe_zones[i].union(agent_unsafe_zones[j]):
-                        print("Critical zone at: ", coord)
                         critical_zone[coord[1], coord[0]] = True
         critical_regions.append(critical_zone)
     return critical_regions
@@ -166,7 +164,7 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
         new_path = [(int(x[0]/grid_scale), int(x[1]/grid_scale)) for x in agent_paths[agent]]
         normal_paths[agent] = new_path
     critical_sections = identify_all_critical_regions(normal_paths, obstacles)
-    """
+    
     for agent in agent_paths:
         new_path = [(int(x[0]/grid_scale), int(x[1]/grid_scale)) for x in agent_paths[agent]]
         path_bef += path_length(new_path)
@@ -182,7 +180,7 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
     print("Path length after smoothing: ", path_aft)
     print("Path length reduction: ", path_bef - path_aft)
     print("Path length reduction percentage: ", (path_bef - path_aft) / path_bef * 100, "%")
-    """
+    
     num_agents = len(agent_paths)
     # Define a list of colors for the agents
     colors = [
@@ -230,6 +228,18 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
 
         
         if current_timestep in range(len(agent_paths[0])):
+            
+            if current_timestep < len(critical_sections):
+                        critical_section = critical_sections[current_timestep]
+            critical_surface = pygame.Surface((cols * grid_scale, rows * grid_scale), pygame.SRCALPHA)
+            for row in range(critical_section.shape[0]):
+                for col in range(critical_section.shape[1]):
+                    if critical_section[row, col]:
+                        x = col * grid_scale
+                        y = row * grid_scale
+                        pygame.draw.rect(critical_surface, (255, 0, 0, 20), (x, y, grid_scale, grid_scale))
+            screen.blit(critical_surface, (0, 0))
+            
             for agent_id, path in agent_paths.items():
                 if current_timestep < len(path):
                     agent_x, agent_y = path[current_timestep]
@@ -243,19 +253,9 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
                     # Overlay critical sections
                     
                     
-                    if current_timestep < len(critical_sections):
-                        critical_section = critical_sections[current_timestep]
-                        for row in range(critical_section.shape[0]):
-                            for col in range(critical_section.shape[1]):
-                                if critical_section[row, col]:
-                                    #print("Critical section at: ", col, row)
-                                    x = col * grid_scale
-                                    y = row * grid_scale
-                                    surface = pygame.Surface((grid_scale, grid_scale), pygame.SRCALPHA)
-                                    surface.fill((255, 0, 0, 20))  # Red with alpha value
-                                    screen.blit(surface, (x, y))
 
-                    agent_circle = pygame.draw.circle(screen, colors[agent_id], (agent_x + grid_scale/2, agent_y + grid_scale/2), 5)
+                    pygame.draw.circle(screen, colors[agent_id], (agent_x + grid_scale/2, agent_y + grid_scale/2), 5)
+                    """
                     for other_agent_id, other_path in agent_paths.items():
                         if agent_id != other_agent_id and current_timestep < len(other_path):
                             other_x, other_y = other_path[current_timestep]
@@ -270,11 +270,13 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
                                 involved_agents.append(agent_id)
                                 involved_agents.append(other_agent_id)
                                 num_collisions += 1
+                    
+                    
                     mouse_pos = pygame.mouse.get_pos()
                     if pygame.mouse.get_pressed()[0]:  # Check if left mouse button is pressed
                         if agent_circle.collidepoint(mouse_pos):
                             print(f"Agent ID: {agent_id}")
-
+                    """
             current_timestep +=1
             if current_timestep >= len(agent_paths[0]):
                 current_timestep = 0
@@ -283,7 +285,7 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
                 raise Exception("Done")
 
         pygame.display.flip()
-        pygame.time.delay(100)
+        pygame.time.delay(10)
 
     pygame.quit()
 

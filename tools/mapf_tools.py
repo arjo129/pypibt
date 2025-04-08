@@ -20,6 +20,21 @@ def ascii_map_to_occupancy(ascii_map: str):
             occupancy[y] = [x]
         else:
             occupancy[y].append(x)
+
+    max_y, max_x = grid.shape
+    for y in range(-1, max_y):
+        if y not in occupancy:
+            occupancy[y] = []
+        occupancy[y].append(-1)
+        occupancy[y].append(max_x)
+
+    for x in range(-1, max_x):
+        if -1 not in occupancy:
+            occupancy[-1] = []
+        if max_y not in occupancy:
+            occupancy[max_x] = []
+        occupancy[-1].append(x)
+        occupancy[max_y].append(x)
     return occupancy
 
 def load_agents(agent_file_path: str, num_agents: int):
