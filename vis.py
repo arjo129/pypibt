@@ -1,11 +1,11 @@
 import pygame
 import numpy as np
-from pypibt import get_grid, lazy_theta_smooth_time_aware, path_length
+from pypibt import get_grid, path_length
+from pypibt.smoothing import smoothe_all_paths
+from pypibt.mapf_utils import scale_paths
 import re
 import random
 import sys
-from shapely.geometry import LineString, Point
-
 
 def _is_straight_line_clear(grid, start, end, critical_section):
     """
@@ -146,8 +146,8 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
             coords = []
             coord_pairs = re.findall(r'\(([\d\.-]+),([\d\.-]+)\)', match.group(2))
             for x_str, y_str in coord_pairs:
-                x = float(x_str) * grid_scale
-                y = float(y_str) * grid_scale
+                x = int(float(x_str)) #* grid_scale
+                y = int(float(y_str)) #* grid_scale
                 coords.append((x, y))
 
             for i in range(len(coords)):
@@ -158,7 +158,9 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
     path_bef = 0
     path_aft = 0
     og_agent_paths = agent_paths.copy()
-
+    agent_paths = smoothe_all_paths(agent_paths, obstacles)
+    agent_paths = scale_paths(agent_paths, grid_scale)
+    """
     normal_paths = {}
     for agent in agent_paths:
         new_path = [(int(x[0]/grid_scale), int(x[1]/grid_scale)) for x in agent_paths[agent]]
@@ -172,15 +174,15 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
         path_aft += path_length(normalized)
         normalized = [(x[0] * grid_scale, x[1] * grid_scale) for x in normalized]
         agent_paths[agent] = normalized
+    """
+    #print(og_agent_paths[7])
+    #print(agent_paths[7])
 
-    print(og_agent_paths[7])
-    print(agent_paths[7])
+    #print("Path length before smoothing: ", path_bef)
+    #print("Path length after smoothing: ", path_aft)
+    #print("Path length reduction: ", path_bef - path_aft)
+    #print("Path length reduction percentage: ", (path_bef - path_aft) / path_bef * 100, "%")
 
-    print("Path length before smoothing: ", path_bef)
-    print("Path length after smoothing: ", path_aft)
-    print("Path length reduction: ", path_bef - path_aft)
-    print("Path length reduction percentage: ", (path_bef - path_aft) / path_bef * 100, "%")
-    
     num_agents = len(agent_paths)
     # Define a list of colors for the agents
     colors = [
@@ -229,17 +231,6 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
         
         if current_timestep in range(len(agent_paths[0])):
             
-            if current_timestep < len(critical_sections):
-                        critical_section = critical_sections[current_timestep]
-            critical_surface = pygame.Surface((cols * grid_scale, rows * grid_scale), pygame.SRCALPHA)
-            for row in range(critical_section.shape[0]):
-                for col in range(critical_section.shape[1]):
-                    if critical_section[row, col]:
-                        x = col * grid_scale
-                        y = row * grid_scale
-                        pygame.draw.rect(critical_surface, (255, 0, 0, 20), (x, y, grid_scale, grid_scale))
-            screen.blit(critical_surface, (0, 0))
-            
             for agent_id, path in agent_paths.items():
                 if current_timestep < len(path):
                     agent_x, agent_y = path[current_timestep]
@@ -249,10 +240,6 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
                             pygame.draw.lines(screen, (255, 0, 0), False, lines)
                         else:
                             pygame.draw.lines(screen, (0, 0, 255), False, lines)
-
-                    # Overlay critical sections
-                    
-                    
 
                     pygame.draw.circle(screen, colors[agent_id], (agent_x + grid_scale/2, agent_y + grid_scale/2), 5)
                     """

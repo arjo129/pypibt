@@ -32,7 +32,7 @@ def ascii_map_to_occupancy(ascii_map: str):
         if -1 not in occupancy:
             occupancy[-1] = []
         if max_y not in occupancy:
-            occupancy[max_x] = []
+            occupancy[max_y] = []
         occupancy[-1].append(x)
         occupancy[max_y].append(x)
     return occupancy
