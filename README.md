@@ -18,17 +18,13 @@ poetry install
 ![berlin](docs/resources/berlin.gif)
 
 This set of experiments explores a post-hoc path smoothing solution for MAPF
-in free space. To run a demo first run PiBT using the following command:
+in free space. To run a demo first run PiBT the following command:
 
 ```
-poetry run python app.py -m assets/Berlin_1_256.map -i assets/Berlin_1_256-random-1.scen -N 200
+poetry run python3 tools/benchmark_path_smoothing.py --map assets/Berlin_1_256.map --scenario assets/Berlin_1_256-random-10.scen --agents 100
 ```
 
-Then run the smoothing+visuallization tool:
-```
-poetry run python vis.py assets/Berlin_1_256.map
-```
-The full mapf benchmarks can be found here: https://movingai.com/benchmarks/mapf/index.html
+We were able to successfully test all instances of the mapf benchmark except the maze instances. You may find the details of the results [here](docs/results/results.pibt.csv). We compare against AA-CCBS+SIPP [here](docs/results/results.aaccbs.csv).
 
 If you use this work in an academic setting consider citing:
 ```
