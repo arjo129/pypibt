@@ -124,9 +124,9 @@ def to_per_agent_trajectory(configs: Configs) ->dict:
     for config in configs:
         for a, coord in enumerate(config):
             if a not in traj:
-                traj[a] = [coord]
+                traj[a] = [(coord[1], coord[0])]
             else:
-                traj[a].append(coord)
+                traj[a].append((coord[1], coord[0]))
     return traj
 
 def scale_paths(paths, scale_factor):

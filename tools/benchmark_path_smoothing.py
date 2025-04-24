@@ -109,9 +109,9 @@ def visualize_agent_motion_with_obstacles(agent_paths, obstacles, grid_scale=4, 
 
             for agent_id, path in agent_paths.items():
                 if current_timestep < len(path):
-                    agent_y, agent_x = path[current_timestep]
+                    agent_x, agent_y = path[current_timestep]
                     if current_timestep > 0:
-                        lines = [(py + grid_scale / 2, px + grid_scale / 2) for px, py in path[:current_timestep+1]]
+                        lines = [(px + grid_scale / 2, py + grid_scale / 2) for px, py in path[:current_timestep+1]]
                         if agent_id in involved_agents:
                             pygame.draw.lines(screen, (255, 0, 0), False, lines)
                         else:
