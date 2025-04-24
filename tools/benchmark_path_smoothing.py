@@ -7,10 +7,12 @@ from pypibt import (
     save_configs_for_visualizer,
     cost_of_solution
 )
-from pypibt.mapf_utils import to_per_agent_trajectory
+from pypibt.mapf_utils import to_per_agent_trajectory, scale_paths
 from pypibt.smoothing import smoothe_all_paths
 import time
 import math
+import random
+import pygame
 
 def create_parser():
     """Creates an argparse parser for command-line arguments."""
@@ -38,6 +40,94 @@ def create_parser():
     )
 
     return parser
+
+
+def visualize_agent_motion_with_obstacles(agent_paths, obstacles, grid_scale=4, screen_width=1024, screen_height=1024):
+    """
+    Visualizes agent motion with obstacles represented by a NumPy array.
+
+    Args:
+        filepath (str): Path to the file containing agent coordinates.
+        obstacles (numpy.ndarray): 2D NumPy array representing obstacles (True for occupied).
+        grid_scale (int): Scaling factor for the coordinates to fit on the screen.
+        screen_width (int): Width of the Pygame screen.
+        screen_height (int): Height of the Pygame screen.
+    """
+
+    pygame.init()
+    screen = pygame.display.set_mode((screen_width, screen_height))
+    pygame.display.set_caption("Agent Motion with Obstacles")
+    agent_paths = scale_paths(agent_paths, grid_scale)
+
+
+    num_agents = len(agent_paths)
+    # Define a list of colors for the agents
+    colors = [
+        (255, 0, 0),    # Red
+        (0, 255, 0),    # Green
+        (0, 0, 255),    # Blue
+        (255, 255, 0),  # Yellow
+        (255, 0, 255),  # Magenta
+        (0, 255, 255),  # Cyan
+        (128, 0, 0),    # Maroon
+        (0, 128, 0),    # Dark Green
+        (0, 0, 128),    # Navy
+        (128, 128, 0),  # Olive
+        (128, 0, 128),  # Purple
+        (0, 128, 128),  # Teal
+        (192, 192, 192) # Silver
+    ]
+
+    # Ensure there are enough colors for all agents
+    if num_agents > len(colors):
+        random.seed(42)
+        while len(colors) < num_agents:
+            colors.append((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+    running = True
+    current_timestep = 0
+    print("Number of agents: ", num_agents)
+
+    involved_agents = []
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        screen.fill((255, 255, 255))
+
+        # Draw obstacles from NumPy array
+        rows, cols = obstacles.shape
+        for row in range(rows):
+            for col in range(cols):
+                if obstacles[row, col]:
+                    x = col * grid_scale
+                    y = row * grid_scale
+                    pygame.draw.rect(screen, (0, 0, 0), (x, y, grid_scale, grid_scale))
+
+
+        if current_timestep in range(len(agent_paths[0])):
+
+            for agent_id, path in agent_paths.items():
+                if current_timestep < len(path):
+                    agent_y, agent_x = path[current_timestep]
+                    if current_timestep > 0:
+                        lines = [(py + grid_scale / 2, px + grid_scale / 2) for px, py in path[:current_timestep+1]]
+                        if agent_id in involved_agents:
+                            pygame.draw.lines(screen, (255, 0, 0), False, lines)
+                        else:
+                            pygame.draw.lines(screen, (0, 0, 255), False, lines)
+
+                    pygame.draw.circle(screen, colors[agent_id], (agent_x + grid_scale/2, agent_y + grid_scale/2), 5)
+
+            current_timestep +=1
+            if current_timestep >= len(agent_paths[0]):
+                current_timestep = 0
+                raise Exception("Done")
+
+        pygame.display.flip()
+        pygame.time.delay(10)
+
+    pygame.quit()
 
 
 
@@ -113,3 +203,4 @@ if __name__ == "__main__":
     print(f"PiBT solved in {t1-t0:.4f} seconds")
     print(f"Smoothing found in {t2-t0:.4f} seconds")
     print(f"Collisions introduced: {count_collisions_at_end_implies_final(paths)}")
+    visualize_agent_motion_with_obstacles(paths, grid)

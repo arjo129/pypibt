@@ -95,7 +95,6 @@ def get_neighbors(grid: Grid, coord: Coord) -> list[Coord]:
 
     # Diagonal step. comment if you don't want to use diagonal steps.
     # TODO also check the adjecent cells for diagonal steps
-    
     if x > 0 and y > 0 and grid[y - 1, x - 1] and grid[y - 1, x] and grid[y, x - 1]:
         neigh.append((y - 1, x - 1))
 
