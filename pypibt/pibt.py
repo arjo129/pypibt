@@ -330,14 +330,6 @@ class PIBTFromMultiGraph:
             self.reservation_system.mark_next_state(v[0], v[1], i)
 
             # priority inheritance (j != i due to the second condition)
-            """
-            if (
-                j != self.NIL
-                and (Q_to[j] == self.NIL_COORD)
-                and (not self.funcPIBT(Q_from, Q_to, j))
-            ):
-                continue
-            """
             found_solution = True
             agents_affected = set()
             for agent in blocking_agents:
