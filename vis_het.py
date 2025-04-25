@@ -257,19 +257,19 @@ class GridMapWithRotation(GraphOn2DPlane):
             raise ValueError("Row, column, or rotation index out of bounds")
 
 def get_pibt_goals(collision_checker: CollisionChecker, start_coords, end_coords):
-    graphs = collision_checker.graphs
     start_configs = []
     end_configs = []
-    for i in range(len(graphs)):
-        g = graphs[i]
-        start_node_id = g.get_node_id(*start_coords[i])
-        end_node_id = g.get_node_id(*end_coords[i])
-        start_configs.append((i, start_node_id))
-        end_configs.append((i, end_node_id))
+    for i in range(len(start_coords)):
+        graph_id = start_coords[i][2]
+        g = collision_checker.graphs[graph_id]
+        start_node_id = g.get_node_id(*start_coords[i][:2])
+        end_node_id = g.get_node_id(*end_coords[i][:2])
+        start_configs.append((graph_id, start_node_id))
+        end_configs.append((graph_id, end_node_id))
     return start_configs, end_configs
     
-trajectory = [(0,4), (1,7)]
-trajectory2 = [(0,4), (1,3)]
+trajectory = [(0,4,0), (1,7)]
+trajectory2 = [(0,4,1), (1,3)]
 
 graph1 = GridMap(50, 8, 8, (50, 50))
 graph2 = GridMap(25, 16, 5, (252, 52))
