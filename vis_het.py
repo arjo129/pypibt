@@ -267,28 +267,75 @@ def get_pibt_goals(collision_checker: CollisionChecker, start_coords, end_coords
         start_configs.append((graph_id, start_node_id))
         end_configs.append((graph_id, end_node_id))
     return start_configs, end_configs
-    
+
+def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
+    pygame.init()
+
+    # Set up the window
+    width, height = 500, 500
+    screen = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("Heterogenous PiBT visualization")
+
+
+    goals = [graphs[starts[i][2]].get_node_id(*ends[i]) for i in range(len(starts))]
+    pygame.display.flip()
+    running = True
+    i = 0
+
+
+    blue = (135, 206, 250)  # Light blue
+    red = (255, 0, 0)
+    colors = [blue, red] # Add more colors
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        screen.fill((0, 0, 0))  # Clear the screen with a black background
+
+        for index, graph in enumerate(graphs):
+            graph.visualize(screen, colors[index])
+
+        results = result[i % len(result)]
+        for agent_id, agent_loc in enumerate(results):
+            graph_id, node_id = agent_loc
+            draw_circle_goal(screen, colors[graph_id], graphs[graph_id].get_node_center(goals[agent_id]), sizes[graph_id])
+        for agent_id, agent_loc in enumerate(results):
+            graph_id, node_id = agent_loc
+            pygame.draw.circle(screen, colors[graph_id], graphs[graph_id].get_node_center(node_id), sizes[graph_id])
+
+        pygame.time.delay(500)  # Shorter delay for interpolation
+        pygame.display.flip()
+        i += 1
+        if i >= len(result):
+            break
+
+    pygame.quit()
+
 trajectory = [(0,4,0), (1,7)]
 trajectory2 = [(0,4,1), (1,3)]
+trajectory3 = [(0,2,1), (1,4)]
 
 graph1 = GridMap(50, 8, 8, (50, 50))
 graph2 = GridMap(25, 16, 5, (252, 52))
 
 collision_check = CollisionChecker([graph1,  graph2])
-starts, ends = get_pibt_goals(collision_check, (trajectory[0], trajectory2[0]), (trajectory[-1], trajectory2[-1]))
+starts, ends = get_pibt_goals(collision_check, (trajectory[0], trajectory2[0], trajectory3[0]), (trajectory[-1], trajectory2[-1], trajectory3[-1]))
+#starts, ends = get_pibt_goals(collision_check, (trajectory[0], trajectory2[0]), (trajectory[-1], trajectory2[-1]))
+
 pibt_solver = PIBTFromMultiGraph(collision_check, starts, ends)
 result = pibt_solver.run()
 blue = (135, 206, 250)  # Light blue
 red = (255, 0, 0)
-pygame.init()
+#pygame.init()
 
 # Set up the window
-width, height = 500, 500
-screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("Hererogenous PiBT visuallization")
+#width, height = 500, 500
+#screen = pygame.display.set_mode((width, height))
+#pygame.display.set_caption("Heterogenous PiBT visualization")
+visualize_solution([graph1, graph2], (trajectory[0], trajectory2[0], trajectory3[0]), (trajectory[-1], trajectory2[-1], trajectory3[-1]), result)
 
-
-
+"""
 goal1 = graph1.get_node_id(*trajectory[-1])
 goal2 = graph2.get_node_id(*trajectory2[-1])
 pygame.display.flip()
@@ -355,3 +402,4 @@ while running:
         i = 0
 
 pygame.quit()
+"""

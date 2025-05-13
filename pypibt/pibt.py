@@ -211,8 +211,8 @@ class CollisionChecker:
 
     def get_initial_priorities(self, starts, goals):
         
-        assert len(starts) == len(self.graphs)
-        assert len(goals) == len(self.graphs)
+        #assert len(starts) == len(self.graphs)
+        #assert len(goals) == len(self.graphs)
         
         max_dist = 0
         for g in self.graphs:
@@ -229,7 +229,7 @@ class CollisionChecker:
     def precompute_correspondance(self):
         for graph_id, graph in enumerate(self.graphs):
             for node_index, node in enumerate(graph.nodes):
-                correspondance_list = []
+                correspondance_list = [(graph_id, node_index)]
                 for other_graph_id, other_graph in enumerate(self.graphs):
                     if graph_id == other_graph_id:
                         continue
@@ -324,6 +324,7 @@ class PIBTFromMultiGraph:
                 continue
 
             blocking_agents = self.reservation_system.get_currently_blocking_agents(v[0], v[1])
+            print(blocking_agents)
 
             # reserve next location
             Q_to[i] = v
@@ -333,6 +334,8 @@ class PIBTFromMultiGraph:
             found_solution = True
             agents_affected = set()
             for agent in blocking_agents:
+                if len(blocking_agents) > 2:
+                    print("More than one blocking agent")
                 if Q_to[agent] != self.NIL_COORD:
                     continue
                 if self.funcPIBT(Q_from, Q_to, agent):
@@ -342,6 +345,7 @@ class PIBTFromMultiGraph:
                     found_solution &= False
                     break
             if not found_solution:
+                print("Solution was not found")
                 for agent in agents_affected:
                     Q_to[agent] = self.NIL_COORD
                 continue
