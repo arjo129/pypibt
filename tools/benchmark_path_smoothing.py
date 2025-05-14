@@ -93,7 +93,7 @@ def visualize_agent_motion_with_obstacles(agent_paths, obstacles, grid_scale=4, 
             if event.type == pygame.QUIT:
                 running = False
 
-        screen.fill((255, 255, 255))
+        screen.fill((128, 128, 128))
 
         # Draw obstacles from NumPy array
         rows, cols = obstacles.shape
@@ -102,7 +102,7 @@ def visualize_agent_motion_with_obstacles(agent_paths, obstacles, grid_scale=4, 
                 if obstacles[row, col]:
                     x = col * grid_scale
                     y = row * grid_scale
-                    pygame.draw.rect(screen, (0, 0, 0), (x, y, grid_scale, grid_scale))
+                    pygame.draw.rect(screen, (255, 255, 255), (x, y, grid_scale, grid_scale))
 
 
         if current_timestep in range(len(agent_paths[0])):
@@ -122,11 +122,11 @@ def visualize_agent_motion_with_obstacles(agent_paths, obstacles, grid_scale=4, 
             current_timestep +=1
             if current_timestep >= len(agent_paths[0]):
                 current_timestep = 0
-                raise Exception("Done")
+                break
 
         pygame.display.flip()
         pygame.time.delay(10)
-
+    pygame.image.save(screen, "my_image.png")
     pygame.quit()
 
 
