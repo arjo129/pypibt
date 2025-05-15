@@ -293,21 +293,33 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
             if event.type == pygame.QUIT:
                 running = False
 
-        screen.fill((0, 0, 0))  # Clear the screen with a black background
+        #screen.fill((0, 0, 0))  # Clear the screen with a black background
+        if i > 0:
+            prev_results = result[(i - 1) % len(result)]
+            curr_results = result[i % len(result)]
+            
+            steps = 10  # Number of interpolation steps
+            for step in range(steps):
+                screen.fill((0, 0, 0))  # Clear the screen with a black background
+                for index, graph in enumerate(graphs):
+                    graph.visualize(screen, colors[index])
+                for agent_id, (prev_loc, curr_loc) in enumerate(zip(prev_results, curr_results)):
+                    prev_graph_id, prev_node_id = prev_loc
+                    curr_graph_id, curr_node_id = curr_loc
 
-        for index, graph in enumerate(graphs):
-            graph.visualize(screen, colors[index])
+                    prev_center = graphs[prev_graph_id].get_node_center(prev_node_id)
+                    curr_center = graphs[curr_graph_id].get_node_center(curr_node_id)
 
-        results = result[i % len(result)]
-        for agent_id, agent_loc in enumerate(results):
-            graph_id, node_id = agent_loc
-            draw_circle_goal(screen, colors[graph_id], graphs[graph_id].get_node_center(goals[agent_id]), sizes[graph_id])
-        for agent_id, agent_loc in enumerate(results):
-            graph_id, node_id = agent_loc
-            pygame.draw.circle(screen, colors[graph_id], graphs[graph_id].get_node_center(node_id), sizes[graph_id])
+                    interpolated_center = (
+                    prev_center[0] + (curr_center[0] - prev_center[0]) * (step / steps),
+                    prev_center[1] + (curr_center[1] - prev_center[1]) * (step / steps),
+                    )
 
-        pygame.time.delay(500)  # Shorter delay for interpolation
-        pygame.display.flip()
+                    pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
+
+                pygame.display.flip()
+                pygame.time.delay(50)  # Delay for smooth interpolation
+
         i += 1
         if i >= len(result):
             break
