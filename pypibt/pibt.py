@@ -240,7 +240,6 @@ class CollisionChecker:
                         if node.is_in_collision(other_node):
                             correspondance_list.append((other_graph_id, other_node_index))
                 self.correspondance_cache[(graph_id, node_index)] = correspondance_list
-        print(self.correspondance_cache)
 
     def get_other_blocked_nodes(self, graph_id: int, node_id: int) -> list[tuple[int, int]]:
         return self.correspondance_cache[(graph_id, node_id)]
