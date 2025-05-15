@@ -237,6 +237,7 @@ class CollisionChecker:
                         if node.is_in_collision(other_node):
                             correspondance_list.append((other_graph_id, other_node_index))
                 self.correspondance_cache[(graph_id, node_index)] = correspondance_list
+        print(self.correspondance_cache)
 
     def get_other_blocked_nodes(self, graph_id: int, node_id: int) -> list[tuple[int, int]]:
         return self.correspondance_cache[(graph_id, node_id)]
@@ -263,12 +264,18 @@ class ReservationSystem:
                 self.next_state[(graph_id, node_index)] = nil
     
     def mark_next_state(self, graph_id: int, node_id: int, agent_id: int):
+        assert isinstance(graph_id, int)
+        assert isinstance(node_id, int)
+        assert isinstance(agent_id, int)
         self.next_state[(graph_id, node_id)] = agent_id
 
     def mark_current_state(self, graph_id: int, node_id: int, agent_id: int):
+        assert isinstance(graph_id, int)
+        assert isinstance(node_id, int)
+        assert isinstance(agent_id, int)
         self.current_state[(graph_id, node_id)] = agent_id
 
-    def check_if_safe_to_proceed(self, graph_id: int, node_id: int, from_graph_id, from_node_id) -> bool:
+    def check_if_safe_to_proceed(self, graph_id: int, node_id: int, from_graph_id: int, from_node_id: int, next_config: list[HetConfig]) -> bool:
         to_check = self.collision_checker.get_other_blocked_nodes(graph_id, node_id)
         from_check = self.collision_checker.get_other_blocked_nodes(from_graph_id, from_node_id)
         for node in to_check:
@@ -278,8 +285,10 @@ class ReservationSystem:
 
         for node in from_check:
             #simple edge check
-            if self.current_state[node] != self.nil and node in to_check:
-                return False
+            continue
+            if self.current_state[node] != self.nil:
+                agent = self.current_state[node]
+
         return True
     
     def get_currently_blocking_agents(self, graph_id: int, node_id: int) -> list[int]:
@@ -361,8 +370,9 @@ class PIBTFromMultiGraph:
         N = len(Q_from)
         Q_to: Config = []
         for i, v in enumerate(Q_from):
+            (graph_id, node_id) = v
             Q_to.append(self.NIL_COORD)
-            self.reservation_system.mark_current_state(i,v,i)
+            self.reservation_system.mark_current_state(graph_id, node_id, i)
 
         # perform PIBT
         A = sorted(list(range(N)), key=lambda i: priorities[i], reverse=True)

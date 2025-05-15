@@ -88,6 +88,7 @@ class GridMap(GraphOn2DPlane):
         self.num_rows = num_rows
         self.num_cols = num_cols
         self.start = start
+        self.centers = {}
 
         nodes = []
       
@@ -109,6 +110,7 @@ class GridMap(GraphOn2DPlane):
                     edges[node_index].append(i * num_cols + j - 1)
                 if j < num_cols - 1:
                     edges[node_index].append(i * num_cols + j + 1)
+                self.centers[node_index] =(center_x, center_y)
 
         super().__init__(nodes, edges)
 
@@ -123,11 +125,8 @@ class GridMap(GraphOn2DPlane):
             tuple[float, float]: The (x, y) coordinates of the node's center.
         """
         if 0 <= node_id < len(self.nodes):
-            col = node_id % self.num_cols
-            row = node_id // self.num_cols
-            center_x = self.start[0] + col * self.cell_size
-            center_y = self.start[1] + row * self.cell_size
-            return center_x, center_y
+
+            return self.centers[node_id]
         else:
             raise ValueError("Node ID out of bounds")
 
