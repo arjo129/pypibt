@@ -195,6 +195,9 @@ class GraphOn2DPlane:
     def get_neighbors(self, node_index: int) -> list[int]:
         return self.neighbors[node_index]
     
+    def get_swept_collision(self, from_node: int, to_node: int) -> shapely.geometry.Polygon:
+        pass
+
 
 class CollisionChecker:
     def __init__(self, graphs: list[GraphOn2DPlane]):
@@ -269,6 +272,12 @@ class ReservationSystem:
         assert isinstance(agent_id, int)
         self.next_state[(graph_id, node_id)] = agent_id
 
+    def unmark_next_state(self, graph_id: int, node_id: int, agent_id: int):
+        assert isinstance(graph_id, int)
+        assert isinstance(node_id, int)
+        assert isinstance(agent_id, int)
+        self.next_state[(graph_id, node_id)] = self.nil
+
     def mark_current_state(self, graph_id: int, node_id: int, agent_id: int):
         assert isinstance(graph_id, int)
         assert isinstance(node_id, int)
@@ -285,10 +294,12 @@ class ReservationSystem:
 
         for node in from_check:
             #simple edge check
-            continue
+            #TODO(arjoc): fix overlap
+            #continue
             if self.current_state[node] != self.nil:
                 agent = self.current_state[node]
-
+                if next_config[agent] in to_check:
+                    return False
         return True
     
     def get_currently_blocking_agents(self, graph_id: int, node_id: int) -> list[int]:
@@ -329,11 +340,10 @@ class PIBTFromMultiGraph:
         # vertex assignment
         for v in C:
             # avoid vertex collision
-            if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1], Q_from[i][0], Q_from[i][1]):
+            if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1], Q_from[i][0], Q_from[i][1], Q_to):
                 continue
 
             blocking_agents = self.reservation_system.get_currently_blocking_agents(v[0], v[1])
-            print(blocking_agents)
 
             # reserve next location
             Q_to[i] = v
@@ -343,8 +353,6 @@ class PIBTFromMultiGraph:
             found_solution = True
             agents_affected = set()
             for agent in blocking_agents:
-                if len(blocking_agents) > 2:
-                    print("More than one blocking agent")
                 if Q_to[agent] != self.NIL_COORD:
                     continue
                 if self.funcPIBT(Q_from, Q_to, agent):
@@ -356,6 +364,7 @@ class PIBTFromMultiGraph:
             if not found_solution:
                 print("Solution was not found")
                 for agent in agents_affected:
+                    self.reservation_system.unmark_next_state(*Q_to[agent])
                     Q_to[agent] = self.NIL_COORD
                 continue
             return True
