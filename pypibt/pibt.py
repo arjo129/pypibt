@@ -156,6 +156,9 @@ class GraphOn2DPlane:
         for node in self.nodes:
             node.visualize(screen, color)
 
+    def get_cost(self, node_from, node_to):
+        return 1
+
     def dijkstra(self, start_node_index: int, end_node_index: int) -> float:
         if (start_node_index, end_node_index) in self.dist_cache:
             return self.dist_cache[(start_node_index, end_node_index)]
@@ -183,7 +186,7 @@ class GraphOn2DPlane:
             for neighbor in self.neighbors[current_node]:
                 if neighbor in visited:
                     continue
-                new_distance = current_distance + 1  # Assuming uniform edge cost
+                new_distance = current_distance + self.get_cost(current_node, neighbor)  # Assuming uniform edge cost
                 if new_distance < distances[neighbor]:
                     distances[neighbor] = new_distance
                     heapq.heappush(pq, (new_distance, neighbor))
