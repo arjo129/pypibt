@@ -293,15 +293,15 @@ class ReservationSystem:
             #simple vertex check
             if self.next_state[node] != self.nil:
                 return False
+        
+        # Check if the next state of the current node is in the to_check list
+        for node in to_check:
+            # Check if there is an agent on any destination cell in the current state
+            agent_id = self.current_state[node]
+            # Check that agent does not swap with you
+            if agent_id != self.nil and next_config[agent_id] in from_check:
+                return False
 
-        for node in from_check:
-            #simple edge check
-            #TODO(arjoc): fix overlap
-            #continue
-            if self.current_state[node] != self.nil:
-                agent = self.current_state[node]
-                if next_config[agent] in to_check:
-                    return False
         return True
     
     def get_currently_blocking_agents(self, graph_id: int, node_id: int) -> list[int]:
