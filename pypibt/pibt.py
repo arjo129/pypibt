@@ -1,9 +1,28 @@
 import numpy as np
 
 from .dist_table import DistTable
-from .mapf_utils import Config, Configs, Coord, Grid, get_neighbors
+from .mapf_utils import Config, Configs, Coord, Grid, get_neighbors, is_valid_coord
 import heapq
 import shapely
+
+def is_diagonal_move(from_coord: Coord, to_coord: Coord) -> bool:
+    dx = abs(from_coord[0] - to_coord[0])
+    dy = abs(from_coord[1] - to_coord[1])
+    return dx == 1 and dy == 1
+
+def get_to_check_vicinity(from_coord: Coord, to_coord: Coord) -> list[Coord]:
+    """
+    Diagonal moves require that we check the vicinity of the destination
+    """
+    x_min = min(from_coord[0], to_coord[0])
+    x_max = max(from_coord[0], to_coord[0])
+    y_min = min(from_coord[1], to_coord[1])
+    y_max = max(from_coord[1], to_coord[1])
+    for y in range(y_min, y_max + 1):
+        for x in range(x_min, x_max + 1):
+            if (x, y) != from_coord and (x, y) != to_coord:
+                yield (x, y)
+
 
 class PIBT:
     def __init__(self, grid: Grid, starts: Config, goals: Config, seed: int = 0):
@@ -24,6 +43,16 @@ class PIBT:
         # used for tie-breaking
         self.rng = np.random.default_rng(seed)
 
+    def check_diagonal_swap_safety(self, from_coord_i: Coord, to_coord_i: Coord, i: int) -> bool:
+        # Check if the swap between two agents is diagonal before running this
+
+        for coord in get_to_check_vicinity(from_coord_i, to_coord_i):
+            # Check if the next location is occupied by another agent
+            if coord != from_coord_i and coord != to_coord_i:
+                if is_valid_coord(self.grid, coord) and self.occupied_nxt[coord] != self.NIL:
+                    return False
+        return True
+
     def funcPIBT(self, Q_from: Config, Q_to: Config, i: int) -> bool:
         # true -> valid, false -> invalid
 
@@ -42,6 +71,10 @@ class PIBT:
 
             # avoid edge collision
             if j != self.NIL and Q_to[j] == Q_from[i]:
+                continue
+
+            # Other type of diagonal swap conflicts also need to be avoided
+            if is_diagonal_move(Q_from[i], v) and not self.check_diagonal_swap_safety(Q_from[i], v, i):
                 continue
 
             # reserve next location
