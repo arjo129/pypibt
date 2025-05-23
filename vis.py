@@ -242,28 +242,7 @@ def visualize_agent_motion_with_obstacles(filepath, obstacles, grid_scale=4, scr
                             pygame.draw.lines(screen, (0, 0, 255), False, lines)
 
                     pygame.draw.circle(screen, colors[agent_id], (agent_x + grid_scale/2, agent_y + grid_scale/2), 5)
-                    """
-                    for other_agent_id, other_path in agent_paths.items():
-                        if agent_id != other_agent_id and current_timestep < len(other_path):
-                            other_x, other_y = other_path[current_timestep]
-                            distance = np.sqrt((agent_x - other_x) ** 2 + (agent_y - other_y) ** 2)
-                            if distance < 1:
-                                print(f"Distance between Agent {agent_id} and Agent {other_agent_id} at timestep {current_timestep}: {distance}")
-                                print(f"Warning: Agent {agent_id} is within 1 unit of Agent {other_agent_id} at timestep {current_timestep}")
-                                # Draw a green square at the collision location
-                                collision_x = int((agent_x + other_x) / 2 // grid_scale) * grid_scale
-                                collision_y = int((agent_y + other_y) / 2 // grid_scale) * grid_scale
-                                collision_location.append((collision_x, collision_y))
-                                involved_agents.append(agent_id)
-                                involved_agents.append(other_agent_id)
-                                num_collisions += 1
                     
-                    
-                    mouse_pos = pygame.mouse.get_pos()
-                    if pygame.mouse.get_pressed()[0]:  # Check if left mouse button is pressed
-                        if agent_circle.collidepoint(mouse_pos):
-                            print(f"Agent ID: {agent_id}")
-                    """
             current_timestep +=1
             if current_timestep >= len(agent_paths[0]):
                 current_timestep = 0

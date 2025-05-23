@@ -211,6 +211,9 @@ class GridMapWithRotation(GraphOn2DPlane):
 
         super().__init__(nodes, edges)
 
+    def get_cost(self, node_from, node_to):
+        return self.cell_size
+
     def get_rotation(self, node_id: int) -> int:
         """
         Returns the rotation of the node with the given ID.
