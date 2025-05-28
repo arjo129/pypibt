@@ -124,6 +124,8 @@ class StaticObstacle:
 
         for x in range(self.occupancy_map.shape[0]):
             for y in range(self.occupancy_map.shape[1]):
+                if self.occupancy_map[x, y]:
+                    continue
                 pygame.draw.rect(screen, color, (x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size))
 
     def is_safe_location(self, min_x: float, min_y: float,
