@@ -118,10 +118,13 @@ class StaticObstacle:
         ind_x, ind_y = int(x//self.cell_size), int(y//self.cell_size)
         return self.occupancy_map[ind_x, ind_y]
 
-    def visuallize(self, screen, color):
+    def visualize(self, screen, color):
         if 'pygame' not in globals():
             import pygame
-        pygame.draw.rect(screen, color, )
+
+        for x in range(self.occupancy_map.shape[0]):
+            for y in range(self.occupancy_map.shape[1]):
+                pygame.draw.rect(screen, color, (x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size))
 
     def is_safe_location(self, min_x: float, min_y: float,
             max_x: float, max_y: float):
