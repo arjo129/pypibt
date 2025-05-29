@@ -174,6 +174,7 @@ class GraphOn2DPlane:
         self.nodes = nodes
         self.neighbors = neighbors
         self.dist_cache = dict()
+        self.connected_neighbors = dict()
         self.max_num = 0
         # Build distance cache for all pairs of nodes
         for index_a, node_a in enumerate(self.nodes):
@@ -216,7 +217,7 @@ class GraphOn2DPlane:
                 break
 
             # Update distances for neighbors
-            for neighbor in self.neighbors[current_node]:
+            for neighbor in self.get_neighbors(current_node):
                 if neighbor in visited:
                     continue
                 new_distance = current_distance + self.get_cost(current_node, neighbor)  # Assuming uniform edge cost
@@ -226,6 +227,19 @@ class GraphOn2DPlane:
 
         # Cache the result
         self.dist_cache[(start_node_index, end_node_index)] = distances[end_node_index]
+
+        # Symmetry to reduce duplication
+        self.dist_cache[(end_node_index, start_node_index)] = distances[end_node_index]
+
+        # During perf tests turn this off. This is good for problem generation
+        if start_node_index in self.connected_neighbors:
+            self.connected_neighbors.add(end_node_index)
+        else:
+            self.connected_neighbors = set([end_node_index])
+        if end_node_index in self.connected_neighbors:
+            self.connected_neighbors.add(start_node_index)
+        else:
+            self.connected_neighbors = set([start_node_index])
         return distances[end_node_index]
 
     def get_neighbors(self, node_index: int) -> list[int]:

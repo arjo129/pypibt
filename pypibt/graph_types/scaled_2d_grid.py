@@ -1,6 +1,8 @@
 from pypibt import Node, GraphOn2DPlane
 from pypibt.mapf_utils import Grid
 from shapely.geometry import Polygon
+import random
+
 
 def create_centered_box(center_x: float, center_y: float, width: float, height: float) -> Polygon:
     """
@@ -185,3 +187,14 @@ class GridMapWithStaticObstacles(GridMap):
             if self.static_obstacles.is_safe_location(top_left[0], top_left[1], bottom_right[0], bottom_right[1]):
                 result.append(neigh)
         return result
+
+    def select_random_start_end(self, n, other_blocked_spots = set()):
+        blocked_spots = other_blocked_spots
+        goal_target_pairs = []
+        for _ in range(n):
+            start = random.choice(filter(lambda x: x not in blocked_spots, self.connected_neighbors.keys()))
+            blocked_spots.add(start)
+            end = random.choice(filter(lambda x: x not in blocked_spots, self.connected_neighbors[start]))
+            blocked_spots.add(end)
+            goal_target_pairs.append((start, end))
+        return goal_target_pairs,blocked_spots
