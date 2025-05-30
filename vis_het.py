@@ -90,6 +90,9 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
                 screen.fill((0, 0, 0))  # Clear the screen with a black background
                 for index, graph in enumerate(graphs):
                     graph.visualize(screen, colors[index])
+                for agent_id, (curr_graph_id,_) in enumerate(curr_results):
+                    draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id])
+
                 for agent_id, (prev_loc, curr_loc) in enumerate(zip(prev_results, curr_results)):
                     prev_graph_id, prev_node_id = prev_loc
                     curr_graph_id, curr_node_id = curr_loc
@@ -101,9 +104,7 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
                     prev_center[0] + (curr_center[0] - prev_center[0]) * (step / steps),
                     prev_center[1] + (curr_center[1] - prev_center[1]) * (step / steps),
                     )
-
                     pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
-                    draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id])
                 pygame.display.flip()
                 pygame.time.delay(50)  # Delay for smooth interpolation
 
