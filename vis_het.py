@@ -66,6 +66,7 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
 
 
     goals = [graphs[starts[i][2]].get_node_id(*ends[i]) for i in range(len(starts))]
+    goal_center = [graphs[starts[i][2]].get_node_center(goals[i]) for i in range(len(starts))]
     pygame.display.flip()
     running = True
     i = 0
@@ -102,7 +103,7 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
                     )
 
                     pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
-
+                    draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id])                pygame.display.flip()
                 pygame.display.flip()
                 pygame.time.delay(50)  # Delay for smooth interpolation
 
@@ -119,7 +120,7 @@ trajectory3 = [(0,2,1), (1,4)]
 graph1 = GridMap(50, 8, 8, (50, 50))
 graph2 = GridMap(25, 16, 5, (252, 52))
 
-collision_check = CollisionChecker([graph1,  graph2])
+collision_check = CollisionChecker([graph1, graph2])
 starts, ends = get_pibt_goals(collision_check, (trajectory[0], trajectory2[0], trajectory3[0]), (trajectory[-1], trajectory2[-1], trajectory3[-1]))
 #starts, ends = get_pibt_goals(collision_check, (trajectory[0], trajectory2[0]), (trajectory[-1], trajectory2[-1]))
 
