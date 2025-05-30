@@ -103,7 +103,7 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
                     )
 
                     pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
-                    draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id])                pygame.display.flip()
+                    draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id])
                 pygame.display.flip()
                 pygame.time.delay(50)  # Delay for smooth interpolation
 
