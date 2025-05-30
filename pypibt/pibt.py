@@ -233,13 +233,13 @@ class GraphOn2DPlane:
 
         # During perf tests turn this off. This is good for problem generation
         if start_node_index in self.connected_neighbors:
-            self.connected_neighbors.add(end_node_index)
+            self.connected_neighbors[start_node_index].add(end_node_index)
         else:
-            self.connected_neighbors = set([end_node_index])
+            self.connected_neighbors[start_node_index] = set([end_node_index])
         if end_node_index in self.connected_neighbors:
-            self.connected_neighbors.add(start_node_index)
+            self.connected_neighbors[end_node_index].add(start_node_index)
         else:
-            self.connected_neighbors = set([start_node_index])
+            self.connected_neighbors[end_node_index] = set([start_node_index])
         return distances[end_node_index]
 
     def get_neighbors(self, node_index: int) -> list[int]:
