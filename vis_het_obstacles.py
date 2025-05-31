@@ -45,28 +45,19 @@ def draw_triangle_agent(screen, color, center, rotation, size):
     # Draw the triangle
     pygame.draw.polygon(screen, color, [tip, left, right])
 
-def get_pibt_goals(collision_checker: CollisionChecker, start_coords, end_coords):
-    start_configs = []
-    end_configs = []
-    for i in range(len(start_coords)):
-        graph_id = start_coords[i][2]
-        g = collision_checker.graphs[graph_id]
-        start_node_id = g.get_node_id(*start_coords[i][:2])
-        end_node_id = g.get_node_id(*end_coords[i][:2])
-        start_configs.append((graph_id, start_node_id))
-        end_configs.append((graph_id, end_node_id))
-    return start_configs, end_configs
 
 def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
     pygame.init()
-
+    print(starts, ends)
     # Set up the window
     width, height = 500, 500
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Heterogenous PiBT visualization")
 
+    print(result)
 
-    goals = [graphs[starts[i][2]].get_node_id(*ends[i]) for i in range(len(starts))]
+
+    goal_center = [graphs[starts[i][0]].get_node_center(ends[i][1]) for i in range(len(starts))]
     pygame.display.flip()
     running = True
     i = 0
@@ -91,6 +82,8 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
                 obstacles.visualize(screen, (255,255,255))
                 for index, graph in enumerate(graphs):
                     graph.visualize(screen, colors[index])
+                for agent_id, (curr_graph_id,_) in enumerate(curr_results):
+                    draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id])
                 for agent_id, (prev_loc, curr_loc) in enumerate(zip(prev_results, curr_results)):
                     prev_graph_id, prev_node_id = prev_loc
                     curr_graph_id, curr_node_id = curr_loc
@@ -104,7 +97,6 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
                     )
 
                     pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
-
                 pygame.display.flip()
                 pygame.time.delay(50)  # Delay for smooth interpolation
 
@@ -114,20 +106,27 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
 
     pygame.quit()
 
-trajectory = [(0,4,0), (1,7)]
-trajectory2 = [(0,4,1), (1,3)]
-trajectory3 = [(0,2,1), (1,4)]
-obstacles = StaticObstacle(1, get_grid("assets/room-64-64-8.map"))
-graph1 = GridMapWithStaticObstacles(50, 8, 8, (50, 50), obstacles)
-graph2 = GridMapWithStaticObstacles(25, 16, 5, (252, 52), obstacles)
+def label_by_graph(start_ends, graph_id):
+    labelled_starts = []
+    unlabelled_ends = []
+    for start, end in start_ends:
+        labelled_starts.append((graph_id, start))
+        unlabelled_ends.append((graph_id, end))
+    return labelled_starts,unlabelled_ends
+
+obstacles = StaticObstacle(50, get_grid("assets/room-64-64-8.map"))
+graph1 = GridMapWithStaticObstacles(50, 8, 8, (0, 0), obstacles)
+graph2 = GridMapWithStaticObstacles(35, 16, 5, (0, 0), obstacles)
+
+start_ends, constraints = graph1.select_random_start_end(3)
+print(start_ends)
+starts,ends = label_by_graph(start_ends, 0)
 
 collision_check = CollisionChecker([graph1,  graph2])
-starts, ends = get_pibt_goals(collision_check, (trajectory[0], trajectory2[0], trajectory3[0]), (trajectory[-1], trajectory2[-1], trajectory3[-1]))
-#starts, ends = get_pibt_goals(collision_check, (trajectory[0], trajectory2[0]), (trajectory[-1], trajectory2[-1]))
 
 pibt_solver = PIBTFromMultiGraph(collision_check, starts, ends)
 result = pibt_solver.run()
 blue = (135, 206, 250)  # Light blue
 red = (255, 0, 0)
 
-visualize_solution([graph1, graph2], (trajectory[0], trajectory2[0], trajectory3[0]), (trajectory[-1], trajectory2[-1], trajectory3[-1]), obstacles, result)
+visualize_solution([graph1, graph2], starts, ends, obstacles, result)

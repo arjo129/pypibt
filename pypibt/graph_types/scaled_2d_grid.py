@@ -1,7 +1,8 @@
 from pypibt import Node, GraphOn2DPlane
 from pypibt.mapf_utils import Grid
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, box
 import random
+import numpy as np
 
 
 def create_centered_box(center_x: float, center_y: float, width: float, height: float) -> Polygon:
@@ -34,6 +35,41 @@ def create_centered_box(center_x: float, center_y: float, width: float, height: 
     polygon = Polygon([(x1, y1), (x2, y2), (x3, y3), (x4, y4)])
     return polygon
 
+def _clamp(val, min_v, max_v):
+    return min(max(min_v, val), max_v)
+
+def scale_up_grid(grid, i):
+    """
+    Scales up a 2D NumPy grid by an integer factor 'i'.
+
+    Each element of the original grid is repeated 'i' times both
+    horizontally and vertically.
+
+    Args:
+        grid (np.ndarray): The input 2D NumPy array (m x n).
+        i (int): The integer scaling factor. Must be a positive integer.
+
+    Returns:
+        np.ndarray: The scaled-up 2D NumPy array ((m*i) x (n*i)).
+
+    Raises:
+        ValueError: If 'i' is not a positive integer.
+    """
+    if not isinstance(i, int) or i <= 0:
+        raise ValueError("Scaling factor 'i' must be a positive integer.")
+
+    # Get the dimensions of the original grid
+    m, n = grid.shape
+
+    # Create an empty grid with the new dimensions
+    scaled_grid = np.zeros((m * i, n * i), dtype=grid.dtype)
+
+    # Populate the scaled grid
+    for r in range(m):
+        for c in range(n):
+            scaled_grid[r*i : (r+1)*i, c*i : (c+1)*i] = grid[r, c]
+
+    return scaled_grid
 
 class GridMap(GraphOn2DPlane):
     def __init__(self, cell_size: float, num_rows: int, num_cols: int, start: tuple[float]):
@@ -51,6 +87,7 @@ class GridMap(GraphOn2DPlane):
         self.num_cols = num_cols
         self.start = start
         self.centers = {}
+        self.row_cols = {}
 
         nodes = []
       
@@ -73,8 +110,15 @@ class GridMap(GraphOn2DPlane):
                 if j < num_cols - 1:
                     edges[node_index].append(i * num_cols + j + 1)
                 self.centers[node_index] =(center_x, center_y)
+                self.row_cols[node_index] = (i,j)
 
         super().__init__(nodes, edges)
+
+    def get_corners(self, node_id):
+        center_x, center_y = self.get_node_center(node_id)
+        top_left_x, top_left_y = center_x - self.cell_size/2, center_y - self.cell_size/2
+        bottom_right_x, bottom_right_y = center_x + self.cell_size/2, center_y + self.cell_size/2
+        return (top_left_x, top_left_y), (bottom_right_x, bottom_right_y)
 
     def get_swept_collision(self, from_node, to_node):
         pass
@@ -115,10 +159,8 @@ class StaticObstacle:
     def __init__(self, cell_size: int, occupancy_map: Grid):
         self.cell_size = cell_size
         self.occupancy_map = occupancy_map
+        self.upscaled_map = scale_up_grid(occupancy_map, cell_size)
 
-    def get_occupancy_at(self, x,y):
-        ind_x, ind_y = int(x//self.cell_size), int(y//self.cell_size)
-        return self.occupancy_map[ind_x, ind_y]
 
     def visualize(self, screen, color):
         if 'pygame' not in globals():
@@ -132,42 +174,25 @@ class StaticObstacle:
 
     def is_safe_location(self, min_x: float, min_y: float,
             max_x: float, max_y: float):
-        """
-        Iterates over a rectangular region in real space and prints the occupancy
-        of each cell within that region.
+        min_x = int(min_x)
+        min_y = int(min_y)
+        max_x = int(max_x)
+        max_y = int(max_y)
 
-        Args:
-            min_x, min_y: The bottom-left real-space coordinates of the region.
-            max_x, max_y: The top-right real-space coordinates of the region.
-        """
+        min_x = _clamp(min_x, 0, self.upscaled_map.shape[0])
+        min_y = _clamp(min_y, 0, self.upscaled_map.shape[1])
+        max_x = _clamp(max_x, 0, self.upscaled_map.shape[0])
+        max_y = _clamp(max_y, 0, self.upscaled_map.shape[1])
 
-        cell_size = self.cell_size
+        start_ind_x = min(min_x, max_x)
+        end_ind_x = max(min_x, max_x)
 
-        # Convert real-space boundaries to grid indices
-        start_ind_x = int(min_x // cell_size)
-        start_ind_y = int(min_y // cell_size)
+        start_ind_y = min(min_y, max_y)
+        end_ind_y = max(min_y, max_y)
 
-        end_ind_x = int(max_x // cell_size)
-        end_ind_y = int(max_y // cell_size)
-
-        # Ensure indices are within map bounds
-        start_ind_x = max(0, start_ind_x)
-        start_ind_y = max(0, start_ind_y)
-        end_ind_x = min(self.occupancy_map.shape[0] - 1, end_ind_x)
-        end_ind_y = min(self.occupancy_map.shape[1] - 1, end_ind_y)
-
-        #print(f"Iterating from grid cell ({start_ind_x}, {start_ind_y}) to ({end_ind_x}, {end_ind_y})")
-
-        # Iterate through the relevant grid cells
-        for ind_x in range(start_ind_x, end_ind_x + 1):
-            for ind_y in range(start_ind_y, end_ind_y + 1):
-                # Calculate real-space coordinates for the center of the current cell
-                # This is one way to get a representative point for the cell.
-                # You could also use (ind_x * cell_size, ind_y * cell_size) for the bottom-left corner.
-                real_x = ind_x * cell_size + cell_size / 2
-                real_y = ind_y * cell_size + cell_size / 2
-
-                if not self.get_occupancy_at(real_x, real_y):
+        for ind_x in range(start_ind_x, end_ind_x):
+            for ind_y in range(start_ind_y, end_ind_y):
+                if not self.upscaled_map[ind_x, ind_y]:
                     return False
         return True
 
@@ -175,9 +200,52 @@ class StaticObstacle:
 class GridMapWithStaticObstacles(GridMap):
     def __init__(self, cell_size: float, num_rows: int, num_cols: int, start: tuple[float], static_obstacles: StaticObstacle):
         self.static_obstacles = static_obstacles
+        self.neighbor_cache = {}
+        self.neighbor_clusters = {}
+        self.cell_to_cluster = {}
         super().__init__(cell_size, num_rows=num_rows, num_cols=num_cols, start=start)
+        self.init_connected_clusters()
+
+    def init_connected_clusters(self):
+        color = 1
+        def begin_fill(x,y, color):
+            start_node_id = self.get_node_id(x,y)
+            if start_node_id in self.cell_to_cluster:
+                return False
+            tl,br = self.get_corners(start_node_id)
+            if not self.static_obstacles.is_safe_location(tl[0], tl[1], br[0], br[1]):
+                return False
+            self.cell_to_cluster[start_node_id] = color
+            self.neighbor_clusters[color] = set([start_node_id])
+            queue = self.get_neighbors(start_node_id)
+            explored = set([start_node_id])
+            while len(queue) != 0:
+                item = queue.pop()
+                if item in explored:
+                    continue
+                explored.add(item)
+                if not self.is_safe_node(item):
+                    continue
+                x,y = self.row_cols[item]
+                self.cell_to_cluster[item] = color
+                self.neighbor_clusters[color].add(item)
+                neighbors = self.get_neighbors(item)
+                for neighbor in neighbors:
+                    if neighbor in explored:
+                        continue
+                    queue.append(item)
+            return True
+
+        for x in range(self.num_rows):
+            for y in range(self.num_cols):
+                should_change_color = begin_fill(x,y, color)
+                if should_change_color:
+                    color += 1
+        print(f"Found {color} clusters")
 
     def get_neighbors(self, node_index: int) -> list[int]:
+        if node_index in self.neighbor_cache:
+            return self.neighbor_cache[node_index]
         neighbours = super().get_neighbors(node_index)
         result = []
         for neigh in neighbours:
@@ -186,15 +254,23 @@ class GridMapWithStaticObstacles(GridMap):
             bottom_right = (x + self.cell_size/2, y + self.cell_size/2)
             if self.static_obstacles.is_safe_location(top_left[0], top_left[1], bottom_right[0], bottom_right[1]):
                 result.append(neigh)
+        self.neighbor_cache[node_index] = result
         return result
+
+    def is_safe_node(self, node_index):
+        x,y = self.get_node_center(node_index)
+        top_left = (x - self.cell_size/2, y - self.cell_size/2)
+        bottom_right = (x + self.cell_size/2, y + self.cell_size/2)
+        return self.static_obstacles.is_safe_location(top_left[0], top_left[1], bottom_right[0], bottom_right[1])
 
     def select_random_start_end(self, n, other_blocked_spots = set()):
         blocked_spots = other_blocked_spots
         goal_target_pairs = []
         for _ in range(n):
-            start = random.choice(filter(lambda x: x not in blocked_spots, self.connected_neighbors.keys()))
+            start = random.choice(list(filter(lambda x: x not in blocked_spots and self.is_safe_node(x), self.cell_to_cluster.keys())))
             blocked_spots.add(start)
-            end = random.choice(filter(lambda x: x not in blocked_spots, self.connected_neighbors[start]))
+            cluster = self.neighbor_clusters[self.cell_to_cluster[start]]
+            end = random.choice(list(filter(lambda x: x not in blocked_spots and self.is_safe_node(x), cluster)))
             blocked_spots.add(end)
             goal_target_pairs.append((start, end))
         return goal_target_pairs,blocked_spots

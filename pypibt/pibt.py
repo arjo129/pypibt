@@ -229,6 +229,7 @@ class GraphOn2DPlane:
 
         # Symmetry to reduce duplication
         self.dist_cache[(end_node_index, start_node_index)] = distances[end_node_index]
+        return distances[end_node_index]
 
     def get_neighbors(self, node_index: int) -> list[int]:
         return self.neighbors[node_index]
