@@ -219,14 +219,11 @@ class GridMapWithStaticObstacles(GridMap):
     def init_connected_clusters(self):
         color = 1
         def begin_fill(x,y, color):
-            print(f"Starting {x,y}")
             start_node_id = self.get_node_id(x,y)
             if start_node_id in self.cell_to_cluster:
-                print("Exiting as color exists")
                 return False
             tl,br = self.get_corners(start_node_id)
             if not self.static_obstacles.is_safe_location(tl[0], tl[1], br[0], br[1]):
-                print("Exiting as static object found")
                 return False
             self.cell_to_cluster[start_node_id] = color
             self.neighbor_clusters[color] = set([start_node_id])
@@ -258,7 +255,6 @@ class GridMapWithStaticObstacles(GridMap):
 
     def get_neighbors(self, node_index: int) -> list[int]:
         if node_index in self.neighbor_cache:
-            print(f"Cache hit {node_index}: {self.neighbor_cache[node_index]}")
             return self.neighbor_cache[node_index]
         neighbours = super().get_neighbors(node_index)
         result = []
@@ -269,7 +265,6 @@ class GridMapWithStaticObstacles(GridMap):
             if self.is_safe_node(neigh):
                 result.append(neigh)
 
-        print(f"{self.row_cols[node_index]} id{node_index} -> {result}. Filtered from {neighbours}")
         self.neighbor_cache[node_index] = result
         return result
 
