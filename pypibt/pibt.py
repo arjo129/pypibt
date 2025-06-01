@@ -60,7 +60,6 @@ class PIBT:
         C = [Q_from[i]] + get_neighbors(self.grid, Q_from[i])
         self.rng.shuffle(C)  # tie-breaking, randomize
         C = sorted(C, key=lambda u: self.dist_tables[i].get(u))
-
         # vertex assignment
         for v in C:
             # avoid vertex collision
@@ -303,6 +302,12 @@ class ReservationSystem:
             for node_index, node in enumerate(graph.nodes):
                 self.current_state[(graph_id, node_index)] = nil
                 self.next_state[(graph_id, node_index)] = nil
+
+    def clear(self):
+        for graph_id, graph in enumerate(self.collision_checker.graphs):
+            for node_index, node in enumerate(graph.nodes):
+                self.current_state[(graph_id, node_index)] = self.nil
+                self.next_state[(graph_id, node_index)] = self.nil
     
     def mark_next_state(self, graph_id: int, node_id: int, agent_id: int):
         assert isinstance(graph_id, int)

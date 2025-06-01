@@ -64,7 +64,6 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Heterogenous PiBT visualization")
 
-
     goals = [graphs[starts[i][2]].get_node_id(*ends[i]) for i in range(len(starts))]
     goal_center = [graphs[starts[i][2]].get_node_center(goals[i]) for i in range(len(starts))]
     pygame.display.flip()

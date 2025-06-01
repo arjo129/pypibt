@@ -206,18 +206,31 @@ class GridMapWithStaticObstacles(GridMap):
         super().__init__(cell_size, num_rows=num_rows, num_cols=num_cols, start=start)
         self.init_connected_clusters()
 
+    def visualize(self, screen, color):
+        super().visualize(screen, color)
+        if 'pygame' not in globals():
+            import pygame
+
+        for node in range(len(self.nodes)):
+            if not self.is_safe_node(node):
+                tl, _= self.get_corners(node)
+                pygame.draw.rect(screen, color, (tl[0], tl[1], self.cell_size, self.cell_size))
+
     def init_connected_clusters(self):
         color = 1
         def begin_fill(x,y, color):
+            print(f"Starting {x,y}")
             start_node_id = self.get_node_id(x,y)
             if start_node_id in self.cell_to_cluster:
+                print("Exiting as color exists")
                 return False
             tl,br = self.get_corners(start_node_id)
             if not self.static_obstacles.is_safe_location(tl[0], tl[1], br[0], br[1]):
+                print("Exiting as static object found")
                 return False
             self.cell_to_cluster[start_node_id] = color
             self.neighbor_clusters[color] = set([start_node_id])
-            queue = self.get_neighbors(start_node_id)
+            queue = self.get_neighbors(start_node_id).copy()
             explored = set([start_node_id])
             while len(queue) != 0:
                 item = queue.pop()
@@ -245,15 +258,18 @@ class GridMapWithStaticObstacles(GridMap):
 
     def get_neighbors(self, node_index: int) -> list[int]:
         if node_index in self.neighbor_cache:
+            print(f"Cache hit {node_index}: {self.neighbor_cache[node_index]}")
             return self.neighbor_cache[node_index]
         neighbours = super().get_neighbors(node_index)
         result = []
+        if not self.is_safe_node(node_index):
+            self.neighbor_cache[node_index] = []
+            return []
         for neigh in neighbours:
-            x,y = self.get_node_center(node_index)
-            top_left = (x - self.cell_size/2, y - self.cell_size/2)
-            bottom_right = (x + self.cell_size/2, y + self.cell_size/2)
-            if self.static_obstacles.is_safe_location(top_left[0], top_left[1], bottom_right[0], bottom_right[1]):
+            if self.is_safe_node(neigh):
                 result.append(neigh)
+
+        print(f"{self.row_cols[node_index]} id{node_index} -> {result}. Filtered from {neighbours}")
         self.neighbor_cache[node_index] = result
         return result
 

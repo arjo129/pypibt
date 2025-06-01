@@ -54,7 +54,8 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Heterogenous PiBT visualization")
 
-    print(result)
+    print(f"starts: {starts}")
+    print(f"ends: {ends}")
 
 
     goal_center = [graphs[starts[i][0]].get_node_center(ends[i][1]) for i in range(len(starts))]
@@ -122,7 +123,7 @@ start_ends, constraints = graph1.select_random_start_end(3)
 print(start_ends)
 starts,ends = label_by_graph(start_ends, 0)
 
-collision_check = CollisionChecker([graph1,  graph2])
+collision_check = CollisionChecker([graph1, graph2])
 
 pibt_solver = PIBTFromMultiGraph(collision_check, starts, ends)
 result = pibt_solver.run()
