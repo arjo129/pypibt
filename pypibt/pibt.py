@@ -244,11 +244,11 @@ class CollisionChecker:
         # The correspondance cache keeps track of the correspondance between nodes of different graphs
         # The key is an  (int, int) tuple representing the (graph_id, node_id) of the node in the first graph
         # The value is a list of (int, int) tuples representing the (graph_id, node_id) of the corresponding nodes in the other graphs
-        self.correspondance_cache = dict()
+        self.correspondence_cache = dict()
         # Precompute correspondance by iterating on all nodes of all graphs
         # This can be accelerated by collision checking structures but for
         # now do it naively
-        self.precompute_correspondance()
+        self.precompute_correspondence()
 
     def get_initial_priorities(self, starts, goals):
         
@@ -267,20 +267,20 @@ class CollisionChecker:
             priorities.append(self.graphs[graph_id].dijkstra(start_node, end_node) / max_dist)
         return priorities
         
-    def precompute_correspondance(self):
+    def precompute_correspondence(self):
         for graph_id, graph in enumerate(self.graphs):
             for node_index, node in enumerate(graph.nodes):
-                correspondance_list = [(graph_id, node_index)]
+                correspondence_list = [(graph_id, node_index)]
                 for other_graph_id, other_graph in enumerate(self.graphs):
                     if graph_id == other_graph_id:
                         continue
                     for other_node_index, other_node in enumerate(other_graph.nodes):
                         if node.is_in_collision(other_node):
-                            correspondance_list.append((other_graph_id, other_node_index))
-                self.correspondance_cache[(graph_id, node_index)] = correspondance_list
+                            correspondence_list.append((other_graph_id, other_node_index))
+                self.correspondence_cache[(graph_id, node_index)] = correspondence_list
 
     def get_other_blocked_nodes(self, graph_id: int, node_id: int) -> list[tuple[int, int]]:
-        return self.correspondance_cache[(graph_id, node_id)]
+        return self.correspondence_cache[(graph_id, node_id)]
     
     def get_neighbours(self, graph_id: int, node_id: int) -> list[tuple[int, int]]:
         return [(graph_id, g) for g in self.graphs[graph_id].get_neighbors(node_id)]

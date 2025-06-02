@@ -50,7 +50,7 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
     pygame.init()
     print(starts, ends)
     # Set up the window
-    width, height = 500, 500
+    width, height = 800, 800
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Heterogenous PiBT visualization")
 
@@ -117,14 +117,23 @@ def label_by_graph(start_ends, graph_id):
 
 obstacles = StaticObstacle(50, get_grid("assets/room-64-64-8.map"))
 graph1 = GridMapWithStaticObstacles(50, 8, 8, (0, 0), obstacles)
-graph2 = GridMapWithStaticObstacles(35, 16, 5, (0, 0), obstacles)
+graph2 = GridMapWithStaticObstacles(35, 22, 22, (0, 0), obstacles)
 
-start_ends, constraints = graph1.select_random_start_end(3)
+collision_check = CollisionChecker([graph1, graph2])
+start_ends, constraints = graph1.select_random_start_end(5)
 print(start_ends)
 starts,ends = label_by_graph(start_ends, 0)
 
-collision_check = CollisionChecker([graph1, graph2])
+blocked_nodes = []
+for other_node in constraints:
+    blocked_nodes += [node for node in collision_check.get_other_blocked_nodes(0, other_node) if node[0] == 1]
+print(f"blocked: {blocked_nodes}")
+curr_graph_blocked_nodes = set([node[1] for node in blocked_nodes])
+g1, constraints = graph2.select_random_start_end(4, curr_graph_blocked_nodes)
+starts2,ends2 = label_by_graph(g1, 1)
 
+starts += starts2
+ends += ends2
 pibt_solver = PIBTFromMultiGraph(collision_check, starts, ends)
 result = pibt_solver.run()
 blue = (135, 206, 250)  # Light blue
