@@ -12,7 +12,7 @@ Subsequently in order to generate valid agent paths we randomly select start pos
 To ensure that the scenarios can actually be solved, we rely on a priority scheme.
 
 ## Some cool demos
-Here we have a bunch of robots with different
+Here we have a bunch of robots with different sizes anddynamics. The blue robots are bigger and move faster while the red robots are smaller and move more slowly, we show that HetPiBT correctly routes the individual vehicles in a safe manner.
 ![](resources/het_pibt.gif)
 
 ## Observations and Conclusions
