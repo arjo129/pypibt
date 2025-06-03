@@ -2,8 +2,8 @@
 
 This repo consists of two extensions to PiBT. The
 first is a path smoother which is able to take pibt
-and extend it to free space, while the second is a
-version of PiBT that works on heterogenous fleets.
+and extend it to free space, while the second is [a
+version of PiBT that works on heterogenous fleets](docs/HeterogenousPiBT.md).
 It is based on Keisuke Okumura's original python pypibt implementation.
 
 # Development
