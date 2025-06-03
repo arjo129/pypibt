@@ -12,10 +12,10 @@ Subsequently in order to generate valid agent paths we randomly select start pos
 To ensure that the scenarios can actually be solved, we rely on a priority scheme.
 
 ## Some cool demos
-Here we have a bunch of robots with different sizes anddynamics. The blue robots are bigger and move faster while the red robots are smaller and move more slowly, we show that HetPiBT correctly routes the individual vehicles in a safe manner.
+Here we have a bunch of robots with different sizes and dynamics. The blue robots are bigger and move faster while the red robots are smaller and move more slowly, we show that HetPiBT correctly routes the individual vehicles in a safe manner.
 ![](resources/het_pibt.gif)
 
 ## Observations and Conclusions
 
-While HetPiBT is fast, it can generate really suboptimal paths and introduce additional movements where unecessary.
-Using PiBT alone for heterogenous search is not a bad idea, but it needs a higher level of optimization to prevent unwanted osscillations.
+While HetPiBT is fast, it can generate really suboptimal paths and introduce additional movements where unnecessary.
+Using PiBT alone for heterogenous search is not a bad idea, but it needs a higher level of optimization to prevent unwanted oscillations.
