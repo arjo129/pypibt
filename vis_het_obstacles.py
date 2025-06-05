@@ -1,5 +1,6 @@
 from pypibt import CollisionChecker, PIBTFromMultiGraph
 from pypibt.graph_types.scaled_2d_grid import GridMapWithStaticObstacles, StaticObstacle
+from pypibt.benchmarks.generate_heterogeneous_problem import *
 from pypibt.mapf_utils import get_grid
 import pygame
 
@@ -107,6 +108,19 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
 
     pygame.quit()
 
+def solve_problem(problem, collision_check: CollisionChecker):
+    graph_space_start = []
+    graph_space_end = []
+    for graph_index in problem:
+        starts = problem[graph_index]['start_coord']
+        ends = problem[graph_index]['end_coord']
+        graph_space_start += coordinates_to_node_id_with_graph_label(collision_check.graphs[graph_index], starts, graph_index)
+        graph_space_end += coordinates_to_node_id_with_graph_label(collision_check.graphs[graph_index], ends, graph_index)
+    print(graph_space_start, graph_space_end)
+    pibt_solver = PIBTFromMultiGraph(collision_check, graph_space_start, graph_space_end)
+    result = pibt_solver.run()
+    return graph_space_start, graph_space_end, result
+
 def label_by_graph(start_ends, graph_id):
     labelled_starts = []
     unlabelled_ends = []
@@ -117,26 +131,10 @@ def label_by_graph(start_ends, graph_id):
 
 obstacles = StaticObstacle(50, get_grid("assets/room-64-64-8.map"))
 graph1 = GridMapWithStaticObstacles(50, 8, 8, (0, 0), obstacles)
-graph2 = GridMapWithStaticObstacles(35, 22, 22, (0, 0), obstacles)
+graph2 = GridMapWithStaticObstacles(35, 16, 16, (0, 0), obstacles)
 
 collision_check = CollisionChecker([graph1, graph2])
-start_ends, constraints = graph1.select_random_start_end(5)
-print(start_ends)
-starts,ends = label_by_graph(start_ends, 0)
 
-blocked_nodes = []
-for other_node in constraints:
-    blocked_nodes += [node for node in collision_check.get_other_blocked_nodes(0, other_node) if node[0] == 1]
-print(f"blocked: {blocked_nodes}")
-curr_graph_blocked_nodes = set([node[1] for node in blocked_nodes])
-g1, constraints = graph2.select_random_start_end(4, curr_graph_blocked_nodes)
-starts2,ends2 = label_by_graph(g1, 1)
-
-starts += starts2
-ends += ends2
-pibt_solver = PIBTFromMultiGraph(collision_check, starts, ends)
-result = pibt_solver.run()
-blue = (135, 206, 250)  # Light blue
-red = (255, 0, 0)
-
+problem = create_random_problem_inst(collision_check, 3)
+starts, ends, result = solve_problem(problem, collision_check)
 visualize_solution([graph1, graph2], starts, ends, obstacles, result)

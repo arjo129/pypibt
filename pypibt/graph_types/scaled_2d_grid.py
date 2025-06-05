@@ -201,10 +201,8 @@ class GridMapWithStaticObstacles(GridMap):
     def __init__(self, cell_size: float, num_rows: int, num_cols: int, start: tuple[float], static_obstacles: StaticObstacle):
         self.static_obstacles = static_obstacles
         self.neighbor_cache = {}
-        self.neighbor_clusters = {}
-        self.cell_to_cluster = {}
+
         super().__init__(cell_size, num_rows=num_rows, num_cols=num_cols, start=start)
-        self.init_connected_clusters()
 
     def visualize(self, screen, color):
         super().visualize(screen, color)
@@ -216,42 +214,13 @@ class GridMapWithStaticObstacles(GridMap):
                 tl, _= self.get_corners(node)
                 pygame.draw.rect(screen, color, (tl[0], tl[1], self.cell_size, self.cell_size))
 
-    def init_connected_clusters(self):
-        color = 1
-        def begin_fill(x,y, color):
-            start_node_id = self.get_node_id(x,y)
-            if start_node_id in self.cell_to_cluster:
-                return False
-            tl,br = self.get_corners(start_node_id)
-            if not self.static_obstacles.is_safe_location(tl[0], tl[1], br[0], br[1]):
-                return False
-            self.cell_to_cluster[start_node_id] = color
-            self.neighbor_clusters[color] = set([start_node_id])
-            queue = self.get_neighbors(start_node_id).copy()
-            explored = set([start_node_id])
-            while len(queue) != 0:
-                item = queue.pop()
-                if item in explored:
-                    continue
-                explored.add(item)
-                if not self.is_safe_node(item):
-                    continue
-                x,y = self.row_cols[item]
-                self.cell_to_cluster[item] = color
-                self.neighbor_clusters[color].add(item)
-                neighbors = self.get_neighbors(item)
-                for neighbor in neighbors:
-                    if neighbor in explored:
-                        continue
-                    queue.append(item)
-            return True
-
-        for x in range(self.num_rows):
-            for y in range(self.num_cols):
-                should_change_color = begin_fill(x,y, color)
-                if should_change_color:
-                    color += 1
-        print(f"Found {color} clusters")
+    def to_numpy_array(self):
+        arr = np.full((self.num_rows, self.num_cols), False, dtype=bool)
+        for node in range(len(self.nodes)):
+            if self.is_safe_node(node):
+                r,c = self.row_cols[node]
+                arr[r,c] = True
+        return arr
 
     def get_neighbors(self, node_index: int) -> list[int]:
         if node_index in self.neighbor_cache:
@@ -273,15 +242,3 @@ class GridMapWithStaticObstacles(GridMap):
         top_left = (x - self.cell_size/2, y - self.cell_size/2)
         bottom_right = (x + self.cell_size/2, y + self.cell_size/2)
         return self.static_obstacles.is_safe_location(top_left[0], top_left[1], bottom_right[0], bottom_right[1])
-
-    def select_random_start_end(self, n, other_blocked_spots = set()):
-        blocked_spots = other_blocked_spots
-        goal_target_pairs = []
-        for _ in range(n):
-            start = random.choice(list(filter(lambda x: x not in blocked_spots and self.is_safe_node(x), self.cell_to_cluster.keys())))
-            blocked_spots.add(start)
-            cluster = self.neighbor_clusters[self.cell_to_cluster[start]]
-            end = random.choice(list(filter(lambda x: x not in blocked_spots and self.is_safe_node(x), cluster)))
-            blocked_spots.add(end)
-            goal_target_pairs.append((start, end))
-        return goal_target_pairs,blocked_spots
