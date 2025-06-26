@@ -3,7 +3,7 @@ from pypibt.mapf_utils import Grid
 from shapely.geometry import Polygon, box
 import random
 import numpy as np
-
+import tqdm
 
 def create_centered_box(center_x: float, center_y: float, width: float, height: float) -> Polygon:
     """
@@ -92,7 +92,7 @@ class GridMap(GraphOn2DPlane):
         nodes = []
       
         edges = {}
-        for i in range(num_rows):
+        for i in tqdm.tqdm(range(num_rows)):
             for j in range(num_cols):
                 center_x = start[0] + j * cell_size
                 center_y = start[1] + i * cell_size

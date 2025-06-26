@@ -4,6 +4,8 @@ from .dist_table import DistTable
 from .mapf_utils import Config, Configs, Coord, Grid, get_neighbors, is_valid_coord
 import heapq
 import shapely
+import tqdm
+import collections
 
 def is_diagonal_move(from_coord: Coord, to_coord: Coord) -> bool:
     dx = abs(from_coord[0] - to_coord[0])
@@ -175,12 +177,26 @@ class GraphOn2DPlane:
         self.dist_cache = dict()
         self.max_num = 0
         # Build distance cache for all pairs of nodes
-        for index_a, node_a in enumerate(self.nodes):
+        """
+        for index_a, node_a in tqdm.tqdm(enumerate(self.nodes)):
             for index_b, node_b in enumerate(self.nodes):
                 if index_a != index_b:
                     self.dist_cache[(index_a, index_b)] = self.dijkstra(index_a, index_b)
                     self.max_num = max(self.max_num, self.dist_cache[(index_a, index_b)])
-
+        """
+        for index_a in tqdm.tqdm(range(len(self.nodes)), desc="Computing paths"):
+            for index_b in range(len(self.nodes)):
+                # Ensure we only compute each pair once (start_node_index, end_node_index)
+                # and leverage symmetry.
+                if index_a == index_b:
+                    self.dist_cache[(index_a, index_b)] = 0
+                elif (index_a, index_b) not in self.dist_cache:
+                    # Use BFS for unweighted shortest paths
+                    distance = self._bfs(index_a, index_b)
+                    self.dist_cache[(index_a, index_b)] = distance
+                    self.dist_cache[(index_b, index_a)] = distance # Cache symmetry
+                    if distance != float('inf'): # Don't consider infinity for max_num
+                        self.max_num = max(self.max_num, distance)
     def get_max_num(self):
         return self.max_num
 
@@ -229,6 +245,41 @@ class GraphOn2DPlane:
         # Symmetry to reduce duplication
         self.dist_cache[(end_node_index, start_node_index)] = distances[end_node_index]
         return distances[end_node_index]
+
+    def _bfs(self, start_node_index: int, end_node_index: int) -> float:
+        """
+        Private helper method to compute the shortest path distance using Breadth-First Search.
+        This is suitable for unweighted graphs (where all edge costs are 1).
+
+        Args:
+            start_node_index: The index of the starting node.
+            end_node_index: The index of the destination node.
+
+        Returns:
+            The shortest distance between the start and end nodes.
+            Returns float('inf') if no path exists.
+        """
+        if start_node_index == end_node_index:
+            return 0
+
+        # Queue for BFS: stores (node_id, distance)
+        queue = collections.deque([(start_node_index, 0)])
+        visited = {start_node_index}
+
+        while queue:
+            current_node, current_distance = queue.popleft()
+
+            # If we've reached the target node, return the distance
+            if current_node == end_node_index:
+                return current_distance
+
+            # Explore unvisited neighbors
+            for neighbor in self.get_neighbors(current_node):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, current_distance + 1)) # Increment distance by 1 for uniform cost
+
+        return float('inf') 
 
     def get_neighbors(self, node_index: int) -> list[int]:
         return self.neighbors[node_index]
@@ -405,9 +456,8 @@ class PIBTFromMultiGraph:
                     found_solution &= False
                     break
             if not found_solution:
-                print("Solution was not found")
                 for agent in agents_affected:
-                    self.reservation_system.unmark_next_state(*Q_to[agent])
+                    self.reservation_system.unmark_next_state(*Q_to[agent], agent)
                     Q_to[agent] = self.NIL_COORD
                 continue
             return True

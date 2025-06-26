@@ -3,7 +3,7 @@ from pypibt.graph_types.scaled_2d_grid import GridMapWithStaticObstacles, Static
 from pypibt.benchmarks.generate_heterogeneous_problem import *
 from pypibt.mapf_utils import get_grid
 import pygame
-
+import time
 
 def draw_circle_goal(screen, color, center, radius):
     """
@@ -47,7 +47,7 @@ def draw_triangle_agent(screen, color, center, rotation, size):
     pygame.draw.polygon(screen, color, [tip, left, right])
 
 
-def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
+def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [5,8,6]):
     pygame.init()
     print(starts, ends)
     # Set up the window
@@ -67,7 +67,8 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [10,8]):
 
     blue = (135, 206, 250)  # Light blue
     red = (255, 0, 0)
-    colors = [blue, red] # Add more colors
+    purple =(0,255,255)
+    colors = [blue, red, purple] # Add more colors
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -129,12 +130,37 @@ def label_by_graph(start_ends, graph_id):
         unlabelled_ends.append((graph_id, end))
     return labelled_starts,unlabelled_ends
 
-obstacles = StaticObstacle(50, get_grid("assets/room-64-64-8.map"))
-graph1 = GridMapWithStaticObstacles(50, 8, 8, (0, 0), obstacles)
-graph2 = GridMapWithStaticObstacles(35, 16, 16, (0, 0), obstacles)
+print("Creating graph")
+obstacles = StaticObstacle(10, get_grid("assets/room-64-64-8.map"))
+print("Graph 1")
+graph1 = GridMapWithStaticObstacles(5, 30, 30, (0, 0), obstacles)
+print("Graph 2")
 
-collision_check = CollisionChecker([graph1, graph2])
+graph2 = GridMapWithStaticObstacles(8, 20, 20, (0, 0), obstacles)
 
-problem = create_random_problem_inst(collision_check, 3)
-starts, ends, result = solve_problem(problem, collision_check)
-visualize_solution([graph1, graph2], starts, ends, obstacles, result)
+print("Graph 2")
+
+graph3 = GridMapWithStaticObstacles(6, 25, 25, (0, 0), obstacles)
+
+graph4 = GridMapWithStaticObstacles(7, 23, 23, (5, 5), obstacles)
+
+graph5 = GridMapWithStaticObstacles(10, 25, 25, (0, 0), obstacles)
+
+graph6 = GridMapWithStaticObstacles(10, 25, 25, (10, 10), obstacles)
+
+with open('output.csv', 'w', newline='\n') as file:
+    computation = [graph1, graph2, graph3, graph4, graph5]
+    for num_fleets in range(2, len(computation)+1):
+        print("Precomputing collisions")
+        collision_check = CollisionChecker(computation[:num_fleets])
+
+        for k in range(2, 10, 2):
+            for i in range(10):
+                print("Solving")
+                problem = create_random_problem_inst(collision_check, k)
+                start_time = time.time()
+                starts, ends, result = solve_problem(problem, collision_check)
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                file.write(f"{num_fleets}, {k}, {k*num_fleets}, {elapsed_time}\n")
+
