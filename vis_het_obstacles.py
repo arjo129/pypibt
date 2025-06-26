@@ -133,34 +133,36 @@ def label_by_graph(start_ends, graph_id):
 print("Creating graph")
 obstacles = StaticObstacle(10, get_grid("assets/room-64-64-8.map"))
 print("Graph 1")
-graph1 = GridMapWithStaticObstacles(5, 30, 30, (0, 0), obstacles)
+graph1 = GridMapWithStaticObstacles(5, 60, 60, (0, 0), obstacles)
 print("Graph 2")
 
-graph2 = GridMapWithStaticObstacles(8, 20, 20, (0, 0), obstacles)
+graph2 = GridMapWithStaticObstacles(8, 60, 60, (0, 0), obstacles)
 
 print("Graph 2")
 
-graph3 = GridMapWithStaticObstacles(6, 25, 25, (0, 0), obstacles)
+graph3 = GridMapWithStaticObstacles(6, 60, 60, (0, 0), obstacles)
 
-graph4 = GridMapWithStaticObstacles(7, 23, 23, (5, 5), obstacles)
+graph4 = GridMapWithStaticObstacles(7, 60, 60, (5, 5), obstacles)
 
-graph5 = GridMapWithStaticObstacles(10, 25, 25, (0, 0), obstacles)
+graph5 = GridMapWithStaticObstacles(10, 60, 60, (0, 0), obstacles)
 
-graph6 = GridMapWithStaticObstacles(10, 25, 25, (10, 10), obstacles)
+graph6 = GridMapWithStaticObstacles(10, 60, 60, (10, 10), obstacles)
 
 with open('output.csv', 'w', newline='\n') as file:
-    computation = [graph1, graph2, graph3, graph4, graph5]
+    computation = [graph1, graph2, graph3, graph4, graph5, graph6]
     for num_fleets in range(2, len(computation)+1):
         print("Precomputing collisions")
         collision_check = CollisionChecker(computation[:num_fleets])
 
-        for k in range(2, 10, 2):
+        for k in range(5, 20, 5):
             for i in range(10):
-                print("Solving")
-                problem = create_random_problem_inst(collision_check, k)
-                start_time = time.time()
-                starts, ends, result = solve_problem(problem, collision_check)
-                end_time = time.time()
-                elapsed_time = end_time - start_time
-                file.write(f"{num_fleets}, {k}, {k*num_fleets}, {elapsed_time}\n")
+                try:
+                    problem = create_random_problem_inst(collision_check, k)
+                    start_time = time.time()
+                    starts, ends, result = solve_problem(problem, collision_check)
+                    end_time = time.time()
+                    elapsed_time = end_time - start_time
+                    file.write(f"{num_fleets}, {k}, {k*num_fleets}, {elapsed_time}\n")
+                except:
+                    pass
 

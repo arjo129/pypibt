@@ -184,19 +184,17 @@ class GraphOn2DPlane:
                     self.dist_cache[(index_a, index_b)] = self.dijkstra(index_a, index_b)
                     self.max_num = max(self.max_num, self.dist_cache[(index_a, index_b)])
         """
-        for index_a in tqdm.tqdm(range(len(self.nodes)), desc="Computing paths"):
-            for index_b in range(len(self.nodes)):
-                # Ensure we only compute each pair once (start_node_index, end_node_index)
-                # and leverage symmetry.
-                if index_a == index_b:
-                    self.dist_cache[(index_a, index_b)] = 0
-                elif (index_a, index_b) not in self.dist_cache:
-                    # Use BFS for unweighted shortest paths
-                    distance = self._bfs(index_a, index_b)
-                    self.dist_cache[(index_a, index_b)] = distance
-                    self.dist_cache[(index_b, index_a)] = distance # Cache symmetry
-                    if distance != float('inf'): # Don't consider infinity for max_num
-                        self.max_num = max(self.max_num, distance)
+        # Pre-compute all-pairs shortest paths using a modified BFS
+        # This loop now just initiates the BFS for each starting node
+        for start_node_index in tqdm.tqdm(range(len(self.nodes)), desc="Computing paths"):
+            self._bfs_all_from_source(start_node_index)
+
+        # After all BFS runs, compute max_num from the populated dist_cache
+        # We need to iterate through the cache to find the maximum
+        for (idx_a, idx_b), dist in self.dist_cache.items():
+            if dist != float('inf'):
+                self.max_num = max(self.max_num, dist)
+
     def get_max_num(self):
         return self.max_num
 
@@ -245,6 +243,47 @@ class GraphOn2DPlane:
         # Symmetry to reduce duplication
         self.dist_cache[(end_node_index, start_node_index)] = distances[end_node_index]
         return distances[end_node_index]
+
+    def _bfs_all_from_source(self, start_node_index: int):
+        """
+        Modified BFS to compute shortest paths from a single source to all other reachable nodes,
+        and populate the dist_cache along the way.
+
+        Args:
+            start_node_index: The index of the starting node.
+        """
+        # Ensure the start node to itself is 0
+        self.dist_cache[(start_node_index, start_node_index)] = 0
+
+        queue = collections.deque([(start_node_index, 0)])
+        # Visited set is important for BFS correctness, but we also populate cache
+        # The cache itself will act as a visited check for future traversals from this source
+        # For a single source BFS, `current_distance` is the shortest.
+
+        # We'll use a local 'distances' dictionary for the current BFS run
+        # This ensures we don't interfere with a partially built global cache
+        # for other start nodes that might be running in a multi-threaded scenario (though not here)
+        # and it also allows us to build up the distances for the current source
+
+        # Using dist_cache directly as the visited set for this specific source BFS run
+        # is a more direct approach as well.
+
+        # Using a set to track visited nodes for the *current* BFS run
+        visited_in_current_bfs = {start_node_index}
+
+        while queue:
+            current_node, current_distance = queue.popleft()
+
+            # Populate the cache for this pair
+            # This is safe because BFS explores in layers, so the first time we reach
+            # a node from start_node_index, it's the shortest path.
+            self.dist_cache[(start_node_index, current_node)] = current_distance
+            self.dist_cache[(current_node, start_node_index)] = current_distance # Leverage symmetry
+
+            for neighbor in self.get_neighbors(current_node):
+                if neighbor not in visited_in_current_bfs:
+                    visited_in_current_bfs.add(neighbor)
+                    queue.append((neighbor, current_distance + 1))
 
     def _bfs(self, start_node_index: int, end_node_index: int) -> float:
         """
@@ -319,7 +358,7 @@ class CollisionChecker:
         return priorities
         
     def precompute_correspondence(self):
-        for graph_id, graph in enumerate(self.graphs):
+        for graph_id, graph in tqdm.tqdm(enumerate(self.graphs)):
             for node_index, node in enumerate(graph.nodes):
                 correspondence_list = [(graph_id, node_index)]
                 for other_graph_id, other_graph in enumerate(self.graphs):
