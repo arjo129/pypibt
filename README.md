@@ -28,5 +28,13 @@ We were able to successfully test all instances of the mapf benchmark except the
 
 If you use this work in an academic setting consider citing:
 ```
-
+@misc{chakravarty2025scalablepostprocessingpipelinelargescale,
+      title={A Scalable Post-Processing Pipeline for Large-Scale Free-Space Multi-Agent Path Planning with PiBT}, 
+      author={Arjo Chakravarty and Michael X. Grey and M. A. Viraj J. Muthugala and Mohan Rajesh Elara},
+      year={2025},
+      eprint={2506.16748},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2506.16748}, 
+}
 ```
