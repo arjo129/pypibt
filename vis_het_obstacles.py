@@ -154,7 +154,7 @@ with open('output.csv', 'w', newline='\n') as file:
         print("Precomputing collisions")
         collision_check = CollisionChecker(computation[:num_fleets])
 
-        for k in range(5, 20, 5):
+        for k in range(5, 200, 50):
             for i in range(10):
                 try:
                     problem = create_random_problem_inst(collision_check, k)
@@ -164,5 +164,5 @@ with open('output.csv', 'w', newline='\n') as file:
                     elapsed_time = end_time - start_time
                     file.write(f"{num_fleets}, {k}, {k*num_fleets}, {elapsed_time}\n")
                 except:
-                    pass
+                    continue
 

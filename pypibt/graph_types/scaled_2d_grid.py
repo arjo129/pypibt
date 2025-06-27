@@ -1,4 +1,4 @@
-from pypibt import Node, GraphOn2DPlane
+from pypibt.graph_types.base2d_grid import GraphOn2DPlane, Node
 from pypibt.mapf_utils import Grid
 from shapely.geometry import Polygon, box
 import random

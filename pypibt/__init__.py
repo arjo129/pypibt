@@ -6,8 +6,8 @@ from .mapf_utils import (
     cost_of_solution,
     path_length
 )
-from .pibt import PIBT, Node, GraphOn2DPlane, PIBTFromMultiGraph, CollisionChecker, ReservationSystem
-
+from .pibt import PIBT, PIBTFromMultiGraph, CollisionChecker, ReservationSystem
+from .graph_types.base2d_grid import  Node, GraphOn2DPlane
 __all__ = [
     "get_grid",
     "get_scenario",
