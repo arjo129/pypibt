@@ -114,6 +114,9 @@ class GridMap(GraphOn2DPlane):
 
         super().__init__(nodes, edges)
 
+    def get_cost(self, node_from, node_to):
+        return super().get_cost(node_from, node_to) * self.cell_size
+
     def get_corners(self, node_id):
         center_x, center_y = self.get_node_center(node_id)
         top_left_x, top_left_y = center_x - self.cell_size/2, center_y - self.cell_size/2

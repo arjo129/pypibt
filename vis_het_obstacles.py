@@ -130,39 +130,50 @@ def label_by_graph(start_ends, graph_id):
         unlabelled_ends.append((graph_id, end))
     return labelled_starts,unlabelled_ends
 
+
 print("Creating graph")
+
 obstacles = StaticObstacle(10, get_grid("assets/room-64-64-8.map"))
-print("Graph 1")
-graph1 = GridMapWithStaticObstacles(5, 60, 60, (0, 0), obstacles)
-print("Graph 2")
 
-graph2 = GridMapWithStaticObstacles(8, 60, 60, (0, 0), obstacles)
+n_graphs =2
 
-print("Graph 2")
+fixed_width= 60
+fixed_height = 60
+initial_start_x = 0
+initial_start_y = 0
+initial_size = 1
 
-graph3 = GridMapWithStaticObstacles(6, 60, 60, (0, 0), obstacles)
+# Create the GridMap instance
+current_start_pos = (10,10)
+graph1 = GridMapWithStaticObstacles(1, int(fixed_width/1), int(fixed_height/1), current_start_pos, obstacles)
 
-graph4 = GridMapWithStaticObstacles(7, 60, 60, (5, 5), obstacles)
+with open('delete_me.csv', 'w', newline='\n') as file:
 
-graph5 = GridMapWithStaticObstacles(10, 60, 60, (0, 0), obstacles)
+    for B_factor in range(0,35,2):
+        computation = [graph1]
+        current_size = initial_size * (1+B_factor*0.5)
+        # Create the GridMap instance
+        graph = GridMapWithStaticObstacles(current_size, int(fixed_width/current_size), int(fixed_height/current_size), current_start_pos, obstacles)
+        computation.append(graph)
+        print(f"Generated GridMap: size={current_size}, start_pos={current_start_pos}")
+        for num_fleets in range(2, len(computation)+1):
+            print("Precomputing collisions")
+            collision_check = CollisionChecker(computation[:num_fleets])
 
-graph6 = GridMapWithStaticObstacles(10, 60, 60, (10, 10), obstacles)
-
-with open('output.csv', 'w', newline='\n') as file:
-    computation = [graph1, graph2, graph3, graph4, graph5, graph6]
-    for num_fleets in range(2, len(computation)+1):
-        print("Precomputing collisions")
-        collision_check = CollisionChecker(computation[:num_fleets])
-
-        for k in range(5, 200, 50):
+            k = 10
             for i in range(10):
                 try:
                     problem = create_random_problem_inst(collision_check, k)
+                    print("Problem")
+                    print(problem)
+
                     start_time = time.time()
                     starts, ends, result = solve_problem(problem, collision_check)
                     end_time = time.time()
                     elapsed_time = end_time - start_time
-                    file.write(f"{num_fleets}, {k}, {k*num_fleets}, {elapsed_time}\n")
+                    file.write(f"{num_fleets}, {k}, {k*num_fleets}, {(1+B_factor*0.5)}, {elapsed_time}\n")
+                    print(f"{num_fleets}, {k}, {k*num_fleets}, {(1+B_factor*0.5)}, {elapsed_time}\n")
                 except:
+                    print("Error")
                     continue
 

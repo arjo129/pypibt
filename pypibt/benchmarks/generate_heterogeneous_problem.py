@@ -114,7 +114,10 @@ def select_random_start_end_for_grid(grid, n, other_blocked_spots = set()):
         starts.append((x, y))
         cluster_to_sample_from = cluster_map[x,y]
         end_locs = cluster_map == cluster_to_sample_from
-        end_loc = random.choice([a for a in find_true_coordinates(end_locs) if a not in other_blocked_spots])
+        end_locations = [a for a in find_true_coordinates(end_locs) if a not in other_blocked_spots]
+        if len(end_locations) == 0:
+            return starts[:-1], ends
+        end_loc = random.choice(end_locations)
         ends.append(end_loc)
         other_blocked_spots.add(end_loc)
     return starts, ends
@@ -135,6 +138,9 @@ def get_row_cols(graph_id: int, collision_check: CollisionChecker, blocked_nodes
     return set(coords)
 
 def create_random_problem_inst(collision_check: CollisionChecker, num_per_graph: int):
+    """
+    Creates a random problem instance given a set of graphs.
+    """
     blocked_nodes = []
     result = {}
     for i in range(len(collision_check.graphs)):
@@ -144,3 +150,20 @@ def create_random_problem_inst(collision_check: CollisionChecker, num_per_graph:
         result[i] ={"start_coord": starts, "end_coord": ends}
         blocked_nodes += coordinates_to_node_id_with_graph_label(collision_check.graphs[i], starts+ends, i)
     return result
+
+
+def export_problem(collision_check: CollisionChecker, problem, file_path):
+    with open(file_path, "w") as f:
+        agent_id = 0
+        for fleet_id in problem:
+            print(fleet_id)
+            start = problem[fleet_id]["start_coord"]
+            end = problem[fleet_id]["end_coord"]
+            assert len(start) == len(end)
+
+            for i in range(len(start)):
+                start_node = collision_check.graphs[fleet_id].get_node_id(*start[i])
+                end_node = collision_check.graphs[fleet_id].get_node_id(*end[i])
+                (sx, sy)= collision_check.graphs[fleet_id].get_node_center(start_node)
+                (ex, ey)= collision_check.graphs[fleet_id].get_node_center(end_node)
+                f.write(f"{agent_id} {fleet_id} {sx} {sy} {ex} {ey}")

@@ -131,8 +131,8 @@ class GraphOn2DPlane:
             # Populate the cache for this pair
             # This is safe because BFS explores in layers, so the first time we reach
             # a node from start_node_index, it's the shortest path.
-            self.dist_cache[(start_node_index, current_node)] = current_distance
-            self.dist_cache[(current_node, start_node_index)] = current_distance # Leverage symmetry
+            self.dist_cache[(start_node_index, current_node)] = current_distance * self.get_cost(0,0)
+            self.dist_cache[(current_node, start_node_index)] = current_distance * self.get_cost(0,0) # Leverage symmetry
 
             for neighbor in self.get_neighbors(current_node):
                 if neighbor not in visited_in_current_bfs:
