@@ -126,6 +126,10 @@ class GridMap(GraphOn2DPlane):
     def get_swept_collision(self, from_node, to_node):
         pass
 
+    def from_node_center_to_node_id(self, x:float, y: float):
+        x,y = int((x - self.start[0])/self.cell_size) , int((y - self.start[1])/self.cell_size)
+        return self.get_node_id(x,y)
+
     def get_node_center(self, node_id: int) -> tuple[float, float]:
         """
         Returns the center coordinates of the node with the given ID.

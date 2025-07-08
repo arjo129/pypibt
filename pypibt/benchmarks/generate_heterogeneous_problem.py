@@ -3,7 +3,10 @@ from collections import deque
 import random
 from typing import List
 
+from pypibt.mapf_utils import get_grid
 from pypibt.pibt import CollisionChecker
+
+from pypibt.graph_types.scaled_2d_grid import StaticObstacle, GridMapWithStaticObstacles
 
 def _flood_fill_count_clusters(grid: np.ndarray) -> int:
     """
@@ -166,4 +169,39 @@ def export_problem(collision_check: CollisionChecker, problem, file_path):
                 end_node = collision_check.graphs[fleet_id].get_node_id(*end[i])
                 (sx, sy)= collision_check.graphs[fleet_id].get_node_center(start_node)
                 (ex, ey)= collision_check.graphs[fleet_id].get_node_center(end_node)
-                f.write(f"{agent_id} {fleet_id} {sx} {sy} {ex} {ey}")
+                f.write(f"{agent_id} {fleet_id} {collision_check.graphs[fleet_id].cell_size} {collision_check.graphs[fleet_id].cell_size} {sx} {sy} {ex} {ey} {collision_check.graphs[fleet_id].num_rows} {collision_check.graphs[fleet_id].num_cols}\n")
+
+
+def import_problem(file_path, map_file, base_map_scale=10):
+    static_obstacles = StaticObstacle(base_map_scale, get_grid(map_file))
+    fleets = {}
+    with open(file_path) as f:
+        for line in f:
+            agent, fleet, footprint, vel, start_x, start_y, goal_x, goal_y, width, height = line.split()
+            if fleet in fleets:
+                fleets[fleet]["agents"].append([start_x, start_y, goal_x, goal_y])
+            else:
+                fleets[fleet] = {
+                    "agents": [[int(start_x), int(start_y), int(goal_x), int(goal_y)]],
+                    "footprint": int(footprint),
+                    "velocity": int(vel),
+                    "width": int(width),
+                    "height": int(height)
+                }
+
+    graphs = []
+    problem = {}
+    for fleet in fleets:
+        graphs.append(
+            GridMapWithStaticObstacles(fleets[fleet]["velocity"], fleets[fleet]["width"], fleets[fleet]["height"],
+                                       (0,0), static_obstacles))
+        problem[len(graphs)] = {
+            "start_coord": [],
+            "end_coord": []
+        }
+        for start_x, start_y, end_x, end_y in fleet[fleets]["agents"]:
+            problem[len(graphs)]["start_coord"].append(graphs[-1].from_node_center_to_node_id(start_x, start_y))
+            problem[len(graphs)]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
+
+    collision_checker = CollisionChecker(graphs)
+    return collision_checker, problem

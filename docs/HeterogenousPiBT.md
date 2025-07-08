@@ -9,7 +9,8 @@ precomputed collision cache to reason over the different robots.
 After some survey, we determined we don't yet have a good set of benchmarks for heterogenous fleets. We reuse the MAPF
 benchmarks for maps however we generate synthetic scenarios. Each scenario grid map gets projected onto each robot's nav-graph.
 Subsequently in order to generate valid agent paths we randomly select start positions for agents and then add end goals for agents.
-To ensure that the scenarios can actually be solved, we rely on a priority scheme.
+To ensure that the scenarios can actually be solved, we rely on doing a BFS for each domain and sampling from it. Furthermore, we perform basic collision checking to ensure start and end goals don't overlap. For more information about benchmarking look over
+[here](HeterogenousBenchmarkFormat.md).
 
 ## Some cool demos
 Here we have a bunch of robots with different sizes and dynamics. The blue robots are bigger and move faster while the red robots are smaller and move more slowly, we show that HetPiBT correctly routes the individual vehicles in a safe manner.

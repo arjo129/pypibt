@@ -5,7 +5,7 @@ A heterogenous benchmark file consists of:
 * An agent list with goals and agent footprints/dynamics.
 
 ```
-agent_id fleet_id footprint_size velocity start_x_coordinate start_y_coordinate goal_x_coordinate goal_y_coordinate
+agent_id fleet_id footprint_size velocity start_x start_y goal_x goal_y grid_width grid_height
 ```
 
 Fleet IDs represent a homogenous fleet, footprint_size and velocity stay the same within a fleet.
