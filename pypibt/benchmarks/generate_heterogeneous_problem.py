@@ -199,7 +199,7 @@ def import_problem(file_path, map_file, base_map_scale=10):
             "start_coord": [],
             "end_coord": []
         }
-        for start_x, start_y, end_x, end_y in fleet[fleets]["agents"]:
+        for start_x, start_y, end_x, end_y in fleets[fleet]["agents"]:
             problem[len(graphs)]["start_coord"].append(graphs[-1].from_node_center_to_node_id(start_x, start_y))
             problem[len(graphs)]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
 
