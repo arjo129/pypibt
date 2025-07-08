@@ -179,7 +179,7 @@ def import_problem(file_path, map_file, base_map_scale=10):
         for line in f:
             agent, fleet, footprint, vel, start_x, start_y, goal_x, goal_y, width, height = line.split()
             if fleet in fleets:
-                fleets[fleet]["agents"].append([start_x, start_y, goal_x, goal_y])
+                fleets[fleet]["agents"].append([int(start_x), int(start_y), int(goal_x), int(goal_y)])
             else:
                 fleets[fleet] = {
                     "agents": [[int(start_x), int(start_y), int(goal_x), int(goal_y)]],
