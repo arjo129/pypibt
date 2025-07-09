@@ -127,8 +127,8 @@ class GridMap(GraphOn2DPlane):
         pass
 
     def from_node_center_to_node_id(self, x:float, y: float):
-        x,y = int((x - self.start[0])/self.cell_size) , int((y - self.start[1])/self.cell_size)
-        return self.get_node_id(x,y)
+        j,i = int((x - self.start[0])/self.cell_size) , int((y - self.start[1])/self.cell_size)
+        return i * self.num_cols + j
 
     def get_node_center(self, node_id: int) -> tuple[float, float]:
         """

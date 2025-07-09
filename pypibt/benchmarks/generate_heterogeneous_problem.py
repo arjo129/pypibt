@@ -195,13 +195,13 @@ def import_problem(file_path, map_file, base_map_scale=10):
         graphs.append(
             GridMapWithStaticObstacles(fleets[fleet]["velocity"], fleets[fleet]["width"], fleets[fleet]["height"],
                                        (0,0), static_obstacles))
-        problem[len(graphs)] = {
+        problem[len(graphs)-1] = {
             "start_coord": [],
             "end_coord": []
         }
         for start_x, start_y, end_x, end_y in fleets[fleet]["agents"]:
-            problem[len(graphs)]["start_coord"].append(graphs[-1].from_node_center_to_node_id(start_x, start_y))
-            problem[len(graphs)]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
+            problem[len(graphs)-1]["start_coord"].append(graphs[-1].from_node_center_to_node_id(start_x, start_y))
+            problem[len(graphs)-1]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
 
     collision_checker = CollisionChecker(graphs)
     return collision_checker, problem

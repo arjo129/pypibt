@@ -63,6 +63,9 @@ class GraphOn2DPlane:
         if (start_node_index, end_node_index) in self.dist_cache:
             return self.dist_cache[(start_node_index, end_node_index)]
 
+        if start_node_index >= len(self.nodes)  or end_node_index >= len(self.nodes):
+            raise Exception(f"Invalid node name {start_node_index} -> {end_node_index}, max nodes {len(self.nodes)}")
+
         # Initialize distances and visited set
         distances = {index: float('inf') for index in range(len(self.nodes))}
         distances[start_node_index] = 0
