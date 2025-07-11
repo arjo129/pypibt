@@ -1,99 +1,99 @@
 import yaml
+from yaml import CLoader as Loader, CDumper as Dumper
+import json
 from collections import defaultdict
-from pypibt.mapf_utils import get_grid, get_scenario
+from pypibt.mapf_utils import get_grid
+from pypibt.benchmarks.generate_heterogeneous_problem import import_problem
 import argparse
-
-# Adjustable agent parameters
-DEFAULT_AGENT = {
-    "yaw": 0.0,
-    "radius": 0.5,
-    "speed": 0.75,
-    "spin": 5000
-}
+import tqdm
 
 def ascii_map_to_occupancy(ascii_map: str):
     grid = get_grid(ascii_map)
     obstacle_coords = [(x, y) for y, row in enumerate(grid) for x, val in enumerate(row) if val == False]
     occupancy = {}
-    for x, y in obstacle_coords:
+
+    for ox, oy in tqdm.tqdm(obstacle_coords):
+        # For each 10x10 block, mark all its constituent 1x1 cells as occupied
+        for y_block in range(oy * 10, (oy + 1) * 10):
+            if y_block not in occupancy:
+                occupancy[y_block] = []
+            for x_block in range(ox * 10, (ox + 1) * 10):
+                occupancy[y_block].append(x_block)
+
+
+    """for x, y in obstacle_coords:
         if y not in occupancy:
             occupancy[y] = [x]
         else:
-            occupancy[y].append(x)
+            occupancy[y].append(x)"""
 
     max_y, max_x = grid.shape
-    for y in range(-1, max_y):
+    for y in range(-1, max_y*10):
         if y not in occupancy:
             occupancy[y] = []
         occupancy[y].append(-1)
-        occupancy[y].append(max_x)
+        occupancy[y].append(max_x*10)
 
-    for x in range(-1, max_x):
+    for x in range(-1, max_x*10):
         if -1 not in occupancy:
             occupancy[-1] = []
-        if max_y not in occupancy:
-            occupancy[max_y] = []
+        if max_y*10 not in occupancy:
+            occupancy[max_y*10] = []
         occupancy[-1].append(x)
-        occupancy[max_y].append(x)
+        occupancy[max_y*10].append(x)
     return occupancy
 
-def load_agents(agent_file_path: str, num_agents: int):
+def load_agents(map_file, agent_file_path: str, num_agents=2):
     agents = {}
 
-    with open(agent_file_path, 'r') as f:
-        lines = f.readlines()
+    collision_checker, problem = import_problem(agent_file_path, map_file)
 
-    for i, line in enumerate(lines):
-        if line.startswith("version"):
-            continue
-        parts = line.strip().split()
-        if len(parts) < 9:
-            continue
 
-        if len(agents) >= num_agents:
-            break
-        _, _, _, _, sx, sy, gx, gy, _ = parts
-        name = f"A{i}"  # A, B, C, ...
-        agent = {
-            "start": [int(sx), int(sy)],
-            "goal": [int(gx), int(gy)],
-            "yaw": 0.0,
-            "radius": 0.5,
-            "speed": 0.75,
-            "spin": 5000
-        }
-        agents[name] = agent
+    for graph_index in problem:
+        starts = problem[graph_index]['start_coord']
+        ends = problem[graph_index]['end_coord']
+        for i in range(min(len(starts), num_agents)):
+            name = f"A{graph_index}_{i}"  # A, B, C, ...
+            start_coord = collision_checker.graphs[graph_index].get_node_center(starts[i])
+            end_coord = collision_checker.graphs[graph_index].get_node_center(ends[i])
+            agent = {
+                "start": [ int(start_coord[0]), int(start_coord[1])],
+                "goal": [ int(end_coord[0]), int(end_coord[1]) ],
+                "yaw": 0.0,
+                "radius": collision_checker.graphs[graph_index].cell_size/2,
+                "speed": collision_checker.graphs[graph_index].cell_size,
+                "spin": 5000
+            }
+            agents[name] = agent
 
     return agents
 
 
 def build_yaml(ascii_map_str, agent_file_path, num_agents=15):
-    lines = ascii_map_str.strip().split("\n")
-    map_height = len(lines)
 
     occupancy = ascii_map_to_occupancy(ascii_map_str)
-    agents = load_agents(agent_file_path, num_agents=num_agents)
+    agents = load_agents(ascii_map_str, agent_file_path)
 
     # Default bounding box and cell size
     output = {
         "agents": agents,
         "obstacles": [],
         "occupancy": occupancy,
-        "cell_size": 1.0,
+        "cell_size": 1,
         "camera_bounds": [
             [-1.0, -1.0],
-            [len(lines[0]) + 1.0, map_height + 1.0]
+            [64+ 1.0, 64 + 1.0]
         ]
     }
 
-    return yaml.dump(output, sort_keys=False)
+    with open("test_new_status.yaml", "w") as f:
+        yaml.dump(output, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate YAML from MAPF map and scenario files.")
     parser.add_argument("--map_file", type=str, required=True, help="Path to the map file.")
     parser.add_argument("--scene_file", type=str, required=True, help="Path to the scenario file.")
-    parser.add_argument("--num_agents", type=int, default=15, help="Number of agents to include.")
+    #parser.add_argument("--num_agents", type=int, default=15, help="Number of agents to include.")
     args = parser.parse_args()
 
-    yaml_str = build_yaml(args.map_file, args.scene_file, num_agents=args.num_agents)
-    print(yaml_str)
+    yaml_str = build_yaml(args.map_file, args.scene_file)
