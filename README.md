@@ -7,6 +7,7 @@ version of PiBT that works on heterogenous fleets](docs/HeterogenousPiBT.md).
 It is based on Keisuke Okumura's original python pypibt implementation.
 
 # Development
+
 To start developing this workspace use poetry:
 ```
 poetry install
@@ -25,6 +26,8 @@ poetry run python3 tools/benchmark_path_smoothing.py --map assets/Berlin_1_256.m
 ```
 
 We were able to successfully test all instances of the mapf benchmark except the maze instances. You may find the details of the results [here](docs/results/results.pibt.csv). We compare against AA-CCBS+SIPP [here](docs/results/results.aaccbs.csv).
+
+For more info read [this paper](https://arxiv.org/abs/2506.16748).
 
 If you use this work in an academic setting consider citing:
 ```
