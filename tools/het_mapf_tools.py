@@ -12,6 +12,7 @@ def ascii_map_to_occupancy(ascii_map: str):
     obstacle_coords = [(x, y) for y, row in enumerate(grid) for x, val in enumerate(row) if val == False]
     occupancy = {}
 
+    """
     for ox, oy in tqdm.tqdm(obstacle_coords):
         # For each 10x10 block, mark all its constituent 1x1 cells as occupied
         for y_block in range(oy * 10, (oy + 1) * 10):
@@ -19,14 +20,21 @@ def ascii_map_to_occupancy(ascii_map: str):
                 occupancy[y_block] = []
             for x_block in range(ox * 10, (ox + 1) * 10):
                 occupancy[y_block].append(x_block)
+    """
+    for ox, oy in tqdm.tqdm(obstacle_coords):
+        # Calculate the center of the 10x10 block in terms of 1x1 cells
+        center_x = ox *10  # 5 is half of the block size (10)
+        center_y = oy *10
 
+        # For each 10x10 block, mark all its constituent 1x1 cells as occupied,
+        # scaling from the center
+        for y_block in range(center_y, center_y + 10):
+            if y_block not in occupancy:
+                occupancy[y_block] = []
+            for x_block in range(center_x, center_x + 10):
+                occupancy[y_block].append(x_block)
 
-    """for x, y in obstacle_coords:
-        if y not in occupancy:
-            occupancy[y] = [x]
-        else:
-            occupancy[y].append(x)"""
-
+    """
     max_y, max_x = grid.shape
     for y in range(-1, max_y*10):
         if y not in occupancy:
@@ -41,12 +49,13 @@ def ascii_map_to_occupancy(ascii_map: str):
             occupancy[max_y*10] = []
         occupancy[-1].append(x)
         occupancy[max_y*10].append(x)
+    """
     return occupancy
 
 def load_agents(map_file, agent_file_path: str, num_agents=2):
     agents = {}
 
-    collision_checker, problem = import_problem(agent_file_path, map_file)
+    collision_checker, problem, _ = import_problem(agent_file_path, map_file)
 
 
     for graph_index in problem:
@@ -57,8 +66,10 @@ def load_agents(map_file, agent_file_path: str, num_agents=2):
             start_coord = collision_checker.graphs[graph_index].get_node_center(starts[i])
             end_coord = collision_checker.graphs[graph_index].get_node_center(ends[i])
             agent = {
-                "start": [ int(start_coord[0]), int(start_coord[1])],
-                "goal": [ int(end_coord[0]), int(end_coord[1]) ],
+                "start": [ int(round(start_coord[0] )),
+                          int(round(start_coord[1]))],
+                "goal": [ int(round(end_coord[0])),
+                         int(round(end_coord[1]))],
                 "yaw": 0.0,
                 "radius": collision_checker.graphs[graph_index].cell_size/2,
                 "speed": collision_checker.graphs[graph_index].cell_size,
@@ -93,6 +104,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate YAML from MAPF map and scenario files.")
     parser.add_argument("--map_file", type=str, required=True, help="Path to the map file.")
     parser.add_argument("--scene_file", type=str, required=True, help="Path to the scenario file.")
+    parser.add_argument("--out_file", type=str)
     #parser.add_argument("--num_agents", type=int, default=15, help="Number of agents to include.")
     args = parser.parse_args()
 
