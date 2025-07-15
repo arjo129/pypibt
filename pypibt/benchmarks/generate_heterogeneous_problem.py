@@ -204,4 +204,4 @@ def import_problem(file_path, map_file, base_map_scale=10):
             problem[len(graphs)-1]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
 
     collision_checker = CollisionChecker(graphs)
-    return collision_checker, problem
+    return collision_checker, problem, static_obstacles
