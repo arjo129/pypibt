@@ -101,7 +101,7 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [5,8,6]):
 
                     pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
                 pygame.display.flip()
-                pygame.time.delay(50)  # Delay for smooth interpolation
+                pygame.time.delay(10)  # Delay for smooth interpolation
 
         i += 1
         if i >= len(result):

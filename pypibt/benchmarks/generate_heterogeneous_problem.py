@@ -7,6 +7,9 @@ from pypibt.mapf_utils import get_grid
 from pypibt.pibt import CollisionChecker
 
 from pypibt.graph_types.scaled_2d_grid import StaticObstacle, GridMapWithStaticObstacles
+import pickle
+import os
+import hashlib
 
 def _flood_fill_count_clusters(grid: np.ndarray) -> int:
     """
@@ -172,9 +175,14 @@ def export_problem(collision_check: CollisionChecker, problem, file_path):
                 f.write(f"{agent_id} {fleet_id} {collision_check.graphs[fleet_id].cell_size} {collision_check.graphs[fleet_id].cell_size} {sx} {sy} {ex} {ey} {collision_check.graphs[fleet_id].num_rows} {collision_check.graphs[fleet_id].num_cols}\n")
 
 
-def import_problem(file_path, map_file, base_map_scale=10):
+def import_problem(file_path, map_file, base_map_scale=10, cache_dir=".hetbench_cache"):
+
+    # Cacheing logic
+    sha256_hasher = hashlib.sha256()
+
     static_obstacles = StaticObstacle(base_map_scale, get_grid(map_file))
     fleets = {}
+    signature = []
     with open(file_path) as f:
         for line in f:
             agent, fleet, footprint, vel, start_x, start_y, goal_x, goal_y, width, height = line.split()
@@ -188,20 +196,43 @@ def import_problem(file_path, map_file, base_map_scale=10):
                     "width": int(width),
                     "height": int(height)
                 }
-
-    graphs = []
-    problem = {}
     for fleet in fleets:
-        graphs.append(
-            GridMapWithStaticObstacles(fleets[fleet]["velocity"], fleets[fleet]["width"], fleets[fleet]["height"],
-                                       (0,0), static_obstacles))
-        problem[len(graphs)-1] = {
-            "start_coord": [],
-            "end_coord": []
-        }
-        for start_x, start_y, end_x, end_y in fleets[fleet]["agents"]:
-            problem[len(graphs)-1]["start_coord"].append(graphs[-1].from_node_center_to_node_id(start_x, start_y))
-            problem[len(graphs)-1]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
+        signature.append(f"{fleets[fleet]['footprint']}-{fleets[fleet]['velocity']}-{fleets[fleet]['width']}-{fleets[fleet]['height']}")
 
-    collision_checker = CollisionChecker(graphs)
-    return collision_checker, problem, static_obstacles
+    signature.sort()
+    signature = "_".join(signature)
+
+    sha256_hasher.update((signature + ":" + map_file).encode('utf-8'))
+    hash = str(sha256_hasher.hexdigest())
+
+    collision_checker = None
+    if os.path.exists(os.path.join(cache_dir, hash)):
+        print("Cache hit, loading scenario")
+        with open(os.path.join(cache_dir, hash), 'rb') as f:
+            try:
+                coll_check, problem, static_obs = pickle.load(f)
+                return (coll_check, problem, static_obs)
+            except:
+                print("Corrupt file overwriting")
+
+    if collision_checker is None:
+        graphs = []
+        problem = {}
+        for fleet in fleets:
+            graphs.append(
+                GridMapWithStaticObstacles(fleets[fleet]["velocity"], fleets[fleet]["width"], fleets[fleet]["height"],
+                                        (0,0), static_obstacles))
+            problem[len(graphs)-1] = {
+                "start_coord": [],
+                "end_coord": []
+            }
+            for start_x, start_y, end_x, end_y in fleets[fleet]["agents"]:
+                problem[len(graphs)-1]["start_coord"].append(graphs[-1].from_node_center_to_node_id(start_x, start_y))
+                problem[len(graphs)-1]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
+
+        collision_checker = CollisionChecker(graphs)
+
+        with open(os.path.join(cache_dir, hash), 'wb') as f:
+            pickle.dump((collision_checker, problem, static_obstacles), f)
+        return collision_checker, problem, static_obstacles
+

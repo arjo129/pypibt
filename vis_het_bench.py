@@ -3,7 +3,7 @@ from pypibt import CollisionChecker, PIBTFromMultiGraph
 import numpy as np
 import pygame
 
-collision_checker, problem, static_obs = import_problem("heterogenous_bench/room-64-64-8.2.scen", "assets/room-64-64-8.map")
+collision_checker, problem, static_obs = import_problem("heterogenous_bench/room-64-64-8.1.scen", "assets/room-64-64-8.map")
 
 def solve_problem(problem, collision_check: CollisionChecker):
     graph_space_start = []
@@ -78,9 +78,9 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [5,8,6]):
             steps = 5  # Number of interpolation steps
             for step in range(steps):
                 screen.fill((0, 0, 0))  # Clear the screen with a black background
-                obstacles.visualize(screen, (255,255,255))
-                for index, graph in enumerate(graphs):
-                    graph.visualize(screen, colors[index])
+                #obstacles.visualize(screen, (255,255,255))
+                #for index, graph in enumerate(graphs):
+                #    graph.visualize(screen, colors[index])
                 for agent_id, (curr_graph_id,_) in enumerate(curr_results):
                     draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id])
                 for agent_id, (prev_loc, curr_loc) in enumerate(zip(prev_results, curr_results)):
@@ -100,6 +100,7 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [5,8,6]):
                     interpolated_center = (interpolated_center[0], interpolated_center[1])
 
                     pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
+                #pygame.image.save(screen, f"screenshot_{i*steps+step}.png")
                 pygame.display.flip()
                 #pygame.time.delay(50)  # Delay for smooth interpolation
 
@@ -117,7 +118,7 @@ def remap_result_to_graph_space(result_vec):
     return np.array(res)
 
 starts, ends, solution = solve_problem(problem, collision_checker)
-#visualize_solution(collision_checker.graphs, starts, ends, static_obs, solution, [graph.cell_size for graph in collision_checker.graphs])
+visualize_solution(collision_checker.graphs, starts, ends, static_obs, solution, [graph.cell_size for graph in collision_checker.graphs])
 print(f"Time steps: {len(solution)}")
 total_length = 0
 for time in range(1,len(solution)):
