@@ -205,23 +205,30 @@ def import_problem(file_path, map_file, base_map_scale=10, cache_dir=".hetbench_
     sha256_hasher.update((signature + ":" + map_file).encode('utf-8'))
     hash = str(sha256_hasher.hexdigest())
 
+    problem = {}
     collision_checker = None
     if os.path.exists(os.path.join(cache_dir, hash)):
         print("Cache hit, loading scenario")
         with open(os.path.join(cache_dir, hash), 'rb') as f:
             try:
                 coll_check, static_obs = pickle.load(f)
-                for graph_id in range(len(coll_check)):
+                print("file loaded")
+                graph_to_fp = {}
+                for graph_id in range(len(coll_check.graphs)):
                     problem[graph_id] = {
                         "start_coord": [],
                         "end_coord": []
                     }
-                for start_x, start_y, end_x, end_y in fleets[fleet]["agents"]:
-                    problem[len(graphs)-1]["start_coord"].append(graphs[-1].from_node_center_to_node_id(start_x, start_y))
-                    problem[len(graphs)-1]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
+                    graph_to_fp[coll_check.graphs[graph_id].cell_size] = graph_id
+
+                for fleet in fleets:
+                    for start_x, start_y, end_x, end_y in fleets[fleet]["agents"]:
+                        graph_id = graph_to_fp[fleets[fleet]["footprint"]]
+                        problem[graph_id]["start_coord"].append(coll_check.graphs[graph_id].from_node_center_to_node_id(start_x, start_y))
+                        problem[graph_id]["end_coord"].append(coll_check.graphs[graph_id].from_node_center_to_node_id(end_x, end_y))
                 return (coll_check, problem, static_obs)
-            except:
-                print("Corrupt file overwriting")
+            except Exception as e:
+                print(f"Corrupt file overwriting {e}")
 
     if collision_checker is None:
         graphs = []
