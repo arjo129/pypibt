@@ -3,7 +3,7 @@ from pypibt import CollisionChecker, PIBTFromMultiGraph
 import numpy as np
 import pygame
 
-collision_checker, problem, static_obs = import_problem("heterogenous_bench/room-64-64-8.1.scen", "assets/room-64-64-8.map")
+collision_checker, problem, static_obs = import_problem("heterogenous_bench/room-64-64-8.2.scen", "assets/room-64-64-8.map")
 
 def solve_problem(problem, collision_check: CollisionChecker):
     graph_space_start = []

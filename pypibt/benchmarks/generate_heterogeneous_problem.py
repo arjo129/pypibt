@@ -210,7 +210,15 @@ def import_problem(file_path, map_file, base_map_scale=10, cache_dir=".hetbench_
         print("Cache hit, loading scenario")
         with open(os.path.join(cache_dir, hash), 'rb') as f:
             try:
-                coll_check, problem, static_obs = pickle.load(f)
+                coll_check, static_obs = pickle.load(f)
+                for graph_id in range(len(coll_check)):
+                    problem[graph_id] = {
+                        "start_coord": [],
+                        "end_coord": []
+                    }
+                for start_x, start_y, end_x, end_y in fleets[fleet]["agents"]:
+                    problem[len(graphs)-1]["start_coord"].append(graphs[-1].from_node_center_to_node_id(start_x, start_y))
+                    problem[len(graphs)-1]["end_coord"].append(graphs[-1].from_node_center_to_node_id(end_x, end_y))
                 return (coll_check, problem, static_obs)
             except:
                 print("Corrupt file overwriting")
@@ -233,6 +241,6 @@ def import_problem(file_path, map_file, base_map_scale=10, cache_dir=".hetbench_
         collision_checker = CollisionChecker(graphs)
 
         with open(os.path.join(cache_dir, hash), 'wb') as f:
-            pickle.dump((collision_checker, problem, static_obstacles), f)
+            pickle.dump((collision_checker, static_obstacles), f)
         return collision_checker, problem, static_obstacles
 
