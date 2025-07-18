@@ -20,3 +20,9 @@ Here we have a bunch of robots with different sizes and dynamics. The blue robot
 
 While HetPiBT is fast, it can generate really suboptimal paths and introduce additional movements where unnecessary.
 Using PiBT alone for heterogenous search is not a bad idea, but it needs a higher level of optimization to prevent unwanted oscillations.
+
+Additionally it is very much possible to deadlock HetPiBT in denser settings. I have some ideas for how to fix this but this instance is an example where HetPiBT completely fails:
+
+![deadlock](resources/deadlock.gif)
+
+There are several remedies to this. The first is to adapt WinPiBT's dynamic window. The second is to adapt the reservation and priority inheritance system to include, minimum kinodynamic move required. Finally we could do backtracking in the event of a loop and perform deadlock detection and resolution at a higher level.
