@@ -178,7 +178,7 @@ class CollisionChecker:
             graph_id, start_node = starts[start_id]
             _, end_node = goals[start_id]
             assert _ == graph_id
-            priorities.append(self.graphs[graph_id].dijkstra(start_node, end_node) / max_dist)
+            priorities.append(self.graphs[graph_id].dijkstra(start_node, end_node) * self.graphs[graph_id].cell_size / max_dist)
         return priorities
 
     def precompute_correspondence(self):
@@ -366,6 +366,10 @@ class PIBTFromMultiGraph:
         self.starts = starts
         self.goals = goals
         self.N = len(self.starts)
+        self.explored = {}
+        self.agent_to_graph = {}
+        for agent, (graph_index, _) in enumerate(starts):
+            self.agent_to_graph[agent] = graph_index
 
         # cache
         self.NIL = self.N  # meaning \bot
@@ -375,7 +379,7 @@ class PIBTFromMultiGraph:
         # used for tie-breaking
         self.rng = np.random.default_rng(seed)
 
-    def funcPIBT(self, Q_from: HetConfig, Q_to: HetConfig, i: int) -> bool:
+    def funcPIBT(self, Q_from: HetConfig, Q_to: HetConfig, i: int, look_ahead) -> bool:
         # true -> valid, false -> invalid
 
         # get candidate next vertices
@@ -385,11 +389,13 @@ class PIBTFromMultiGraph:
 
         # vertex assignment
         for v in C:
+            #print(f"agent {i}, trying to move to {self.collision_checker.graphs[v[0]].}")
             # avoid vertex collision
             if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1], Q_from[i][0], Q_from[i][1], Q_to):
                 continue
 
             blocking_agents = self.reservation_system.get_currently_blocking_agents(v[0], v[1])
+            print(blocking_agents)
 
             # reserve next location
             Q_to[i] = v
@@ -401,7 +407,7 @@ class PIBTFromMultiGraph:
             for agent in blocking_agents:
                 if Q_to[agent] != self.NIL_COORD:
                     continue
-                if self.funcPIBT(Q_from, Q_to, agent):
+                if self.funcPIBT(Q_from, Q_to, agent, look_ahead):
                     found_solution &= True
                     agents_affected.add(agent)
                 else:
@@ -432,7 +438,7 @@ class PIBTFromMultiGraph:
         A = sorted(list(range(N)), key=lambda i: priorities[i], reverse=True)
         for i in A:
             if Q_to[i] == self.NIL_COORD:
-                self.funcPIBT(Q_from, Q_to, i)
+                self.funcPIBT(Q_from, Q_to, i, self.collision_checker.graphs[self.agent_to_graph[i]].cell_size)
 
         # cleanup
         for q_from, q_to in zip(Q_from, Q_to):
@@ -440,7 +446,7 @@ class PIBTFromMultiGraph:
             self.reservation_system.mark_next_state(q_to[0], q_to[1], self.NIL)
         return Q_to
 
-    def run(self, max_timestep: int = 1000) -> list[HetConfig]:
+    def run(self, max_timestep: int = 10000) -> list[HetConfig]:
         # define priorities
         priorities = self.collision_checker.get_initial_priorities(self.starts, self.goals)
 
@@ -449,6 +455,14 @@ class PIBTFromMultiGraph:
         while len(configs) <= max_timestep:
             # obtain new configuration
             Q = self.step(configs[-1], priorities)
+            x = tuple(Q)
+            print(priorities)
+            if x in self.explored:
+
+                print(f"uh-oh looped from {self.explored[x]} to {len(configs)}")
+                return configs
+            self.explored[x] = len(configs)
+
             configs.append(Q)
 
             # update priorities & goal check
@@ -461,5 +475,6 @@ class PIBTFromMultiGraph:
                     priorities[i] -= np.floor(priorities[i])
             if flg_fin:
                 break  # goal
-
+        if not flg_fin:
+            print("UNSOLVABLE")
         return configs

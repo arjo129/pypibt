@@ -1,6 +1,7 @@
 import shapely
 import tqdm
 import collections
+import numpy as np
 """
 Every node in a graph has a shape property. The shape property represents the shape of the node in 2D space.
 """
@@ -12,14 +13,14 @@ class Node:
         # Check if two square nodes are in collision
         return self.shape.intersects(other.shape)
     
-    def visualize(self, screen, color):
+    def visualize(self, screen, color, scale=1):
         if 'pygame' not in globals():
             import pygame
         # Draw the outline of the polygon by iterating over its edges
         for i in range(len(self.shape.exterior.coords) - 1):
-            start = self.shape.exterior.coords[i]
-            end = self.shape.exterior.coords[i + 1]
-            pygame.draw.line(screen, color, start, end, 1)
+            start = np.array(self.shape.exterior.coords[i]) * scale
+            end = np.array(self.shape.exterior.coords[i + 1]) * scale
+            pygame.draw.line(screen, color, tuple(start), tuple(end), 1)
 
 """
 Representation of a nav mesh graph on a 2D plane
@@ -52,12 +53,12 @@ class GraphOn2DPlane:
     def get_max_num(self):
         return self.max_num
 
-    def visualize(self, screen, color):
+    def visualize(self, screen, color, scale):
         for node in self.nodes:
-            node.visualize(screen, color)
+            node.visualize(screen, color, scale)
 
     def get_cost(self, node_from, node_to):
-        return 1
+        return self.cell_size
 
     def dijkstra(self, start_node_index: int, end_node_index: int) -> float:
         if (start_node_index, end_node_index) in self.dist_cache:

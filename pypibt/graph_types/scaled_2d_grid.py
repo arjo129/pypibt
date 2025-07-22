@@ -211,15 +211,15 @@ class GridMapWithStaticObstacles(GridMap):
 
         super().__init__(cell_size, num_rows=num_rows, num_cols=num_cols, start=start)
 
-    def visualize(self, screen, color):
-        super().visualize(screen, color)
+    def visualize(self, screen, color, scale= 1):
+        super().visualize(screen, color, scale)
         if 'pygame' not in globals():
             import pygame
 
-        for node in range(len(self.nodes)):
-            if not self.is_safe_node(node):
-                tl, _= self.get_corners(node)
-                pygame.draw.rect(screen, color, (tl[0], tl[1], self.cell_size, self.cell_size))
+        #for node in range(len(self.nodes)):
+        #    if not self.is_safe_node(node):
+        #        tl, _= self.get_corners(node)
+        #        pygame.draw.rect(screen, color, (tl[0] * scale, tl[1] * scale, self.cell_size *scale, self.cell_size *scale))
 
     def to_numpy_array(self):
         arr = np.full((self.num_rows, self.num_cols), False, dtype=bool)
