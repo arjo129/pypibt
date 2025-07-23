@@ -284,7 +284,7 @@ class CollisionChecker:
 
     def get_other_blocked_nodes(self, graph_id: int, node_id: int) -> list[tuple[int, int]]:
         return self.correspondence_cache[(graph_id, node_id)]
-    
+
     def get_neighbours(self, graph_id: int, node_id: int) -> list[tuple[int, int]]:
         return [(graph_id, g) for g in self.graphs[graph_id].get_neighbors(node_id)]
 
@@ -311,7 +311,7 @@ class ReservationSystem:
             for node_index, node in enumerate(graph.nodes):
                 self.current_state[(graph_id, node_index)] = self.nil
                 self.next_state[(graph_id, node_index)] = self.nil
-    
+
     def mark_next_state(self, graph_id: int, node_id: int, agent_id: int):
         assert isinstance(graph_id, int)
         assert isinstance(node_id, int)
@@ -337,7 +337,7 @@ class ReservationSystem:
             #simple vertex check
             if self.next_state[node] != self.nil:
                 return False
-        
+
         # Check if the next state of the current node is in the to_check list
         for node in to_check:
             # Check if there is an agent on any destination cell in the current state
@@ -347,7 +347,7 @@ class ReservationSystem:
                 return False
 
         return True
-    
+
     def get_currently_blocking_agents(self, graph_id: int, node_id: int) -> list[int]:
         to_check = self.collision_checker.get_other_blocked_nodes(graph_id, node_id)
         agents = []
@@ -356,10 +356,71 @@ class ReservationSystem:
             if self.current_state[node] != self.nil:
                 agents.append(self.current_state[node])
         return agents
-            
 
 
-# For heterogenous graphs for different agens
+class ReservationSystemHeterogenous:
+    def __init__(self, num_agents: int, collision_checker: CollisionChecker, time_steps=10000):
+        self.state = -np.ones((num_agents, time_steps, 2))
+        self.collision_checker = collision_checker
+        self.blocked_nodes = [{} for i in range(time_steps)]
+
+    def register_path(self, agent, path, start_time):
+        """
+        agent is the agent blocking the path
+        path is of form [(graph_id, node_id)]
+        start_time is int
+        """
+        for (t, (graph_id, node_id)) in enumerate(path):
+            self.state[agent, t + start_time, 0] = graph_id
+            self.state[agent, t + start_time, 1] = node_id
+            nodes_to_block = self.collision_checker.get_other_blocked_nodes(graph_id, node_id)
+            for node in nodes_to_block:
+                self.blocked_nodes[start_time + t][node] = agent
+
+    def space_time_bfs(self, agent, start_time, look_ahead):
+        """
+        Performs space-time-BFS throught the reservation system.
+        Returns a list of reachable destinations and their travel time.
+        """
+        graph_id, node_id = self.state[agent, start_time]
+        graph_id = int(graph_id)
+        node_id = int(node_id)
+
+        queue = collections.deque()
+        queue.append(((graph_id, node_id), start_time))
+        explored = set()
+        explored.add(((graph_id, node_id), start_time))
+        reachable_destinations = []
+
+        while len(queue) > 0:
+            (curr_graph_id, curr_node_id), time = queue.popleft()
+
+            # Add to reachable destinations if it's a valid spot
+            if time > start_time:
+                reachable_destinations.append(((curr_graph_id, curr_node_id), time - start_time))
+
+            if time >= start_time + look_ahead:
+                continue
+
+            # Get neighbors of the current node
+            neighbors = self.collision_checker.get_neighbours(curr_graph_id, curr_node_id)
+            # Also consider staying in the same spot
+            neighbors.append((curr_graph_id, curr_node_id))
+
+            for (next_graph_id, next_node_id) in neighbors:
+                next_time = time + 1
+                if (next_graph_id, next_node_id) in self.blocked_nodes[next_time]:
+                    continue
+                if ((next_graph_id, next_node_id), next_time) in explored:
+                    continue
+
+                explored.add(((next_graph_id, next_node_id), next_time))
+                queue.append(((next_graph_id, next_node_id), next_time))
+        return reachable_destinations
+
+"""
+Naive multi-agent PiBT. Can deadlock in some scenarios.
+"""
 class PIBTFromMultiGraph:
     def __init__(self, collision_checker: CollisionChecker, starts: list[HetConfig], goals: list[HetConfig], seed: int = 0):
         self.collision_checker = collision_checker
@@ -386,12 +447,12 @@ class PIBTFromMultiGraph:
         C = [Q_from[i]] + self.collision_checker.get_neighbours(*Q_from[i])
         self.rng.shuffle(C)  # tie-breaking, randomize
         C = sorted(C, key=lambda u: self.collision_checker.get_distance(u[0], u[1], self.goals[i][1]))
-
         # vertex assignment
         for v in C:
             #print(f"agent {i}, trying to move to {self.collision_checker.graphs[v[0]].}")
             # avoid vertex collision
             if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1], Q_from[i][0], Q_from[i][1], Q_to):
+                print(f"Not safe to proceed for {i}")
                 continue
 
             blocking_agents = self.reservation_system.get_currently_blocking_agents(v[0], v[1])

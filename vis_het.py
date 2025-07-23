@@ -83,7 +83,7 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
         if i > 0:
             prev_results = result[(i - 1) % len(result)]
             curr_results = result[i % len(result)]
-            
+
             steps = 100  # Number of interpolation steps
             for step in range(steps):
                 screen.fill((0, 0, 0))  # Clear the screen with a black background
