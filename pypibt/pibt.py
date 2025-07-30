@@ -411,6 +411,17 @@ class ReservationSystemHeterogenous:
                 next_time = time + 1
                 if (next_graph_id, next_node_id) in self.blocked_nodes[next_time]:
                     continue
+
+                # Edge collision check: prevent swaps
+                # If an agent is at our destination at the current time...
+                if (next_graph_id, next_node_id) in self.blocked_nodes[time]:
+                    blocking_agent = self.blocked_nodes[time][(next_graph_id, next_node_id)]
+                    #...and they are moving to our current location at the next time...
+                    blocking_agent_next_pos = tuple(self.state[blocking_agent, next_time, :])
+                    if blocking_agent_next_pos == (curr_graph_id, curr_node_id):
+                        # Then it's a swap, so this move is invalid.
+                        continue
+
                 if ((next_graph_id, next_node_id), next_time) in explored:
                     continue
 

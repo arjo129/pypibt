@@ -169,7 +169,7 @@ class StaticObstacle:
         self.upscaled_map = scale_up_grid(occupancy_map, cell_size)
 
 
-    def visualize(self, screen, color):
+    def visualize(self, screen, color, scale=1):
         if 'pygame' not in globals():
             import pygame
 
@@ -177,7 +177,7 @@ class StaticObstacle:
             for y in range(self.occupancy_map.shape[1]):
                 if self.occupancy_map[x, y]:
                     continue
-                pygame.draw.rect(screen, color, (x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size))
+                pygame.draw.rect(screen, color, (x * self.cell_size*scale, y * self.cell_size*scale, self.cell_size*scale, self.cell_size*scale))
 
     def is_safe_location(self, min_x: float, min_y: float,
             max_x: float, max_y: float):

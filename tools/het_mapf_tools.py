@@ -80,7 +80,7 @@ def load_agents(map_file, agent_file_path: str, num_agents=2):
     return agents
 
 
-def build_yaml(ascii_map_str, agent_file_path, num_agents=15):
+def build_yaml(ascii_map_str, agent_file_path, out_file, num_agents=15):
 
     occupancy = ascii_map_to_occupancy(ascii_map_str)
     agents = load_agents(ascii_map_str, agent_file_path)
@@ -97,7 +97,7 @@ def build_yaml(ascii_map_str, agent_file_path, num_agents=15):
         ]
     }
 
-    with open("test_new_status.yaml", "w") as f:
+    with open(out_file, "w") as f:
         yaml.dump(output, f)
 
 if __name__ == "__main__":
@@ -108,4 +108,4 @@ if __name__ == "__main__":
     #parser.add_argument("--num_agents", type=int, default=15, help="Number of agents to include.")
     args = parser.parse_args()
 
-    yaml_str = build_yaml(args.map_file, args.scene_file)
+    yaml_str = build_yaml(args.map_file, args.scene_file, args.out_file)
