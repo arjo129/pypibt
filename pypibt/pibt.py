@@ -133,7 +133,7 @@ class PIBT:
             # obtain new configuration
             Q = self.step(configs[-1], priorities)
             configs.append(Q)
-            
+
             # update priorities & goal check
             flg_fin = True
             for i in range(self.N):
@@ -467,7 +467,6 @@ class PIBTFromMultiGraph:
                 continue
 
             blocking_agents = self.reservation_system.get_currently_blocking_agents(v[0], v[1])
-            print(blocking_agents)
 
             # reserve next location
             Q_to[i] = v
@@ -485,6 +484,7 @@ class PIBTFromMultiGraph:
                 else:
                     found_solution &= False
                     break
+
             if not found_solution:
                 for agent in agents_affected:
                     self.reservation_system.unmark_next_state(*Q_to[agent], agent)

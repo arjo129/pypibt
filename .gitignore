@@ -192,7 +192,6 @@ pyrightconfig.json
 **/.virtual_documents/
 output.txt
 assets/Berlin*
-assets/room*
 assets/Boston_0_256.map
 assets/brc202d.map
 assets/den312d.map

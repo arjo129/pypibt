@@ -41,13 +41,15 @@ def draw_circle_goal(screen, color, center, radius):
     background_color = (0, 0, 0)  # Assuming black background
     pygame.draw.circle(screen, background_color, center, inner_radius)
 
-def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [5,8,6]):
+def visualize_solution(graphs, starts, ends, obstacles, result):
     pygame.init()
     print(starts, ends)
     # Set up the window
     width, height = 1000, 1000
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Heterogenous PiBT visualization")
+
+    sizes = [graph.cell_size * 10 for graph in graphs]
 
     print(f"starts: {starts}")
     print(f"ends: {ends}")
@@ -78,11 +80,11 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [5,8,6]):
             steps = 5  # Number of interpolation steps
             for step in range(steps):
                 screen.fill((0, 0, 0))  # Clear the screen with a black background
-                #obstacles.visualize(screen, (255,255,255))
+                obstacles.visualize(screen, (255,255,255), 10)
                 #for index, graph in enumerate(graphs):
                 #    graph.visualize(screen, colors[index], scale = 10)
                 for agent_id, (curr_graph_id,_) in enumerate(curr_results):
-                    draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id])
+                    draw_circle_goal(screen, colors[curr_graph_id], goal_center[agent_id], sizes[curr_graph_id]/2)
                 for agent_id, (prev_loc, curr_loc) in enumerate(zip(prev_results, curr_results)):
                     prev_graph_id, prev_node_id = prev_loc
                     curr_graph_id, curr_node_id = curr_loc
@@ -99,12 +101,13 @@ def visualize_solution(graphs, starts, ends, obstacles, result, sizes= [5,8,6]):
                     interpolated_center *= 10
                     interpolated_center = (interpolated_center[0], interpolated_center[1])
 
-                    pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
-                #pygame.image.save(screen, f"screenshot_{i*steps+step}.png")
+                    pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id]/2)
+                   
                 pygame.display.flip()
-                pygame.time.delay(50)  # Delay for smooth interpolation
-
-        i += 1
+                pygame.time.delay(100)  # Delay for smooth interpolation
+            
+            
+            i += 1
         if i >= len(result):
             break
 
@@ -126,7 +129,7 @@ if __name__ == "__main__":
     collision_checker, problem, static_obs = import_problem(arg.scene_file, arg.map_file)
 
     starts, ends, solution = solve_problem(problem, collision_checker)
-    visualize_solution(collision_checker.graphs, starts, ends, static_obs, solution, [graph.cell_size for graph in collision_checker.graphs])
+    visualize_solution(collision_checker.graphs, starts, ends, static_obs, solution)
     print(f"Time steps: {len(solution)}")
     total_length = 0
     for time in range(1,len(solution)):

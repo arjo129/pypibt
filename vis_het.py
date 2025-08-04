@@ -100,10 +100,12 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
                     curr_center = graphs[curr_graph_id].get_node_center(curr_node_id)
 
                     interpolated_center = (
-                    prev_center[0] + (curr_center[0] - prev_center[0]) * (step / steps),
-                    prev_center[1] + (curr_center[1] - prev_center[1]) * (step / steps),
+                        prev_center[0] + (curr_center[0] - prev_center[0]) * (step / steps),
+                        prev_center[1] + (curr_center[1] - prev_center[1]) * (step / steps),
                     )
                     pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
+
+                pygame.image.save(screen, f"screenshot_{i}.png")
                 pygame.display.flip()
                 pygame.time.delay(50)  # Delay for smooth interpolation
 
