@@ -90,7 +90,6 @@ class GridMap(GraphOn2DPlane):
         self.row_cols = {}
 
         nodes = []
-      
         edges = {}
         for i in tqdm.tqdm(range(num_rows)):
             for j in range(num_cols):

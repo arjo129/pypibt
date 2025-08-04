@@ -3,27 +3,6 @@ from pypibt.graph_types.scaled_2d_grid import GridMap
 from shapely.geometry import Polygon
 import numpy as np
 
-def create_centered_box(center_x: float, center_y: float, width: float, height: float) -> Polygon:
-    """
-    Creates a shapely Polygon representing a box centered at (center_x, center_y).
-    """
-    half_width = width / 2.0
-    half_height = height / 2.0
-
-    # Calculate the coordinates of the corners
-    x1 = center_x - half_width
-    y1 = center_y - half_height
-    x2 = center_x + half_width
-    y2 = center_y - half_height
-    x3 = center_x + half_width
-    y3 = center_y + half_height
-    x4 = center_x - half_width
-    y4 = center_y + half_height
-
-    # Create the Polygon
-    polygon = Polygon([(x1, y1), (x2, y2), (x3, y3), (x4, y4)])
-    return polygon
-
 def test_space_time_bfs():
     # Create a simple graph
     graph1 = GridMap(1.0, 3, 3, (0.5, 0.5))
