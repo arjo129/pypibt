@@ -394,20 +394,44 @@ class ReservationSystemHeterogenous:
         for (t, (graph_id, node_id)) in enumerate(path):
             nodes_to_block = self.collision_checker.get_other_blocked_nodes(graph_id, node_id)
             if agent in self.considered_blocked_nodes_by_agent:
-                self.considered_blocked_nodes_by_agent[agent].append((t, nodes_to_block))
+                self.considered_blocked_nodes_by_agent[agent].append((start_time + t, nodes_to_block))
             else:
-                self.considered_blocked_nodes_by_agent[agent] = [(t, nodes_to_block)]
+                self.considered_blocked_nodes_by_agent[agent] = [(start_time + t, nodes_to_block)]
             for node in nodes_to_block:
-                if node in nodes_to_block:
+                if node in self.considering_to_block[start_time + t]:
                     self.considering_to_block[start_time + t][node].append(agent)
                 else:
                     self.considering_to_block[start_time + t][node] = [agent]
 
-    def roll_back_paths_from(self, agent):
-        pass
+    def _roll_back_specific_agent(self, agent):
+        del self.paths_in_consideration[agent]
+        nodes_to_remove = self.considered_blocked_nodes_by_agent[agent]
+        for t, node_set_to_remove in nodes_to_remove:
+            for node in node_set_to_remove:
+                self.considering_to_block[t][node].remove(agent)
+                if len(self.considering_to_block[t][node]) == 0:
+                    del self.considering_to_block[t][node]
+        del self.considered_blocked_nodes_by_agent[agent]
 
-    def commit_paths(self, agent):
-        pass
+    def roll_back_paths_from(self, agent):
+        agent_id = self.consideration_order[agent]
+        for ag in range(agent_id, len(self.considering_agents)):
+            self._roll_back_specific_agent(self.considering_agents[ag])
+
+        while agent_id < len(self.considering_agents):
+            self.considering_agents.pop()
+
+    def commit_paths(self):
+        for agent_to_commit in self.considering_agents:
+            start_time, path = self.paths_in_consideration[agent_to_commit]
+            self.register_path(agent_to_commit, path, start_time)
+
+        # Clean up all "in consideration" data structures
+        self.considering_to_block = [{} for _ in range(len(self.considering_to_block))]
+        self.paths_in_consideration.clear()
+        self.consideration_order.clear()
+        self.considering_agents.clear()
+        self.considered_blocked_nodes_by_agent.clear()
 
     def agent_has_allocation(self, agent, time):
         return self.state[agent, time, 0] >= 0
@@ -456,6 +480,21 @@ class ReservationSystemHeterogenous:
                     if blocking_agent_next_pos == (curr_graph_id, curr_node_id):
                         # Then it's a swap, so this move is invalid.
                         continue
+
+                # These are hypothetically blocked
+                if (next_graph_id, next_node_id) in self.considering_to_block[next_time]:
+                    continue
+
+                # Edge collision check: prevent swaps
+                # If an agent is at our destination at the current time...
+                if (next_graph_id, next_node_id) in self.considering_to_block[time]:
+                    blocking_agents = self.considering_to_block[time][(next_graph_id, next_node_id)]
+                    #...and they are moving to our current location at the next time...
+                    for blocking_agent in blocking_agents:
+                        blocking_agent_next_pos = tuple(self.state[blocking_agent, next_time, :])
+                        if blocking_agent_next_pos == (curr_graph_id, curr_node_id):
+                            # Then it's a swap, so this move is invalid.
+                            continue
 
                 if ((next_graph_id, next_node_id), next_time) in explored:
                     continue
