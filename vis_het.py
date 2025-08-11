@@ -84,7 +84,7 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
             prev_results = result[(i - 1) % len(result)]
             curr_results = result[i % len(result)]
 
-            steps = 100  # Number of interpolation steps
+            steps = 20  # Number of interpolation steps
             for step in range(steps):
                 screen.fill((0, 0, 0))  # Clear the screen with a black background
                 for index, graph in enumerate(graphs):
@@ -104,8 +104,9 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
                         prev_center[1] + (curr_center[1] - prev_center[1]) * (step / steps),
                     )
                     pygame.draw.circle(screen, colors[curr_graph_id], interpolated_center, sizes[curr_graph_id])
+                    pygame.draw.line(screen, colors[curr_graph_id], interpolated_center, goal_center[agent_id], 1)
 
-                pygame.image.save(screen, f"screenshot_{i}.png")
+                pygame.image.save(screen, f"tmp/sc/screenshot_{i * steps + step:06d}.png")
                 pygame.display.flip()
                 pygame.time.delay(50)  # Delay for smooth interpolation
 
@@ -115,12 +116,12 @@ def visualize_solution(graphs, starts, ends, result, sizes= [10,8]):
 
     pygame.quit()
 
-trajectory = [(0,0,0), (1,1)]
+trajectory = [(0,1,0), (1,1)]
 trajectory2 = [(2,2,1), (0,0)]
 trajectory3 = [(3,3,1), (0,2)]
 
 graph1 = GridMap(50, 4, 4, (10,10))
-graph2 = GridMap(25, 4, 4, (10,10))
+graph2 = GridMap(25, 4, 5, (10,10))
 
 collision_check = CollisionChecker([graph1, graph2])
 starts, ends = get_pibt_goals(collision_check, (trajectory[0], trajectory2[0], trajectory3[0]), (trajectory[-1], trajectory2[-1], trajectory3[-1]))
