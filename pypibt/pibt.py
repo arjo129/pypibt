@@ -148,6 +148,128 @@ class PIBT:
         return configs
 
 
+class PIBTWithBannedTimeTrajectories:
+    def __init__(self, grid: Grid, starts: Config, goals: Config, seed: int = 0, banned_neighborhoods = []):
+        self.grid = grid
+        self.starts = starts
+        self.goals = goals
+        self.N = len(self.starts)
+
+        # distance table
+        self.dist_tables = [DistTable(grid, goal) for goal in goals]
+
+        # cache
+        self.NIL = self.N  # meaning \bot
+        self.NIL_COORD: Coord = self.grid.shape  # meaning \bot
+        self.occupied_now = np.full(grid.shape, self.NIL, dtype=int)
+        self.occupied_nxt = np.full(grid.shape, self.NIL, dtype=int)
+
+        # used for tie-breaking
+        self.rng = np.random.default_rng(seed)
+        self.banned_neighborhoods = banned_neighborhoods
+
+    def check_diagonal_swap_safety(self, from_coord_i: Coord, to_coord_i: Coord, i: int) -> bool:
+        # Check if the swap between two agents is diagonal before running this
+
+        for coord in get_to_check_vicinity(from_coord_i, to_coord_i):
+            # Check if the next location is occupied by another agent
+            if coord != from_coord_i and coord != to_coord_i:
+                if is_valid_coord(self.grid, coord) and self.occupied_nxt[coord] != self.NIL:
+                    return False
+        return True
+
+    def funcPIBT(self, Q_from: Config, Q_to: Config, i: int, time: int) -> bool:
+        # true -> valid, false -> invalid
+
+        # get candidate next vertices
+        C = [Q_from[i]] + get_neighbors(self.grid, Q_from[i])
+        self.rng.shuffle(C)  # tie-breaking, randomize
+        C = sorted(C, key=lambda u: self.dist_tables[i].get(u))
+        # vertex assignment
+        for v in C:
+            # avoid vertex collision
+            if self.occupied_nxt[v] != self.NIL:
+                continue
+
+            if v in self.banned_neighborhoods[time]:
+                continue
+
+            j = self.occupied_now[v]
+
+            # avoid edge collision
+            if j != self.NIL and Q_to[j] == Q_from[i]:
+                continue
+
+            # Other type of diagonal swap conflicts also need to be avoided
+            if is_diagonal_move(Q_from[i], v) and not self.check_diagonal_swap_safety(Q_from[i], v, i):
+                continue
+
+            # reserve next location
+            Q_to[i] = v
+            self.occupied_nxt[v] = i
+
+            # priority inheritance (j != i due to the second condition)
+            if (
+                j != self.NIL
+                and (Q_to[j] == self.NIL_COORD)
+                and (not self.funcPIBT(Q_from, Q_to, j, time))
+            ):
+                continue
+
+            return True
+
+        # failed to secure node
+        Q_to[i] = Q_from[i]
+        self.occupied_nxt[Q_from[i]] = i
+        return False
+
+    def step(self, Q_from: Config, priorities: list[float], time: int) -> Config:
+        # setup
+        N = len(Q_from)
+        Q_to: Config = []
+        for i, v in enumerate(Q_from):
+            Q_to.append(self.NIL_COORD)
+            self.occupied_now[v] = i
+
+        # perform PIBT
+        A = sorted(list(range(N)), key=lambda i: priorities[i], reverse=True)
+        for i in A:
+            if Q_to[i] == self.NIL_COORD:
+                self.funcPIBT(Q_from, Q_to, i, time)
+
+        # cleanup
+        for q_from, q_to in zip(Q_from, Q_to):
+            self.occupied_now[q_from] = self.NIL
+            self.occupied_nxt[q_to] = self.NIL
+
+        return Q_to
+
+    def run(self, max_timestep: int = 1000) -> Configs:
+        # define priorities
+        priorities: list[float] = []
+        for i in range(self.N):
+            priorities.append(self.dist_tables[i].get(self.starts[i]) / self.grid.size)
+
+        # main loop, generate sequence of configurations
+        configs = [self.starts]
+        while len(configs) <= max_timestep:
+            # obtain new configuration
+            Q = self.step(configs[-1], priorities, len(configs))
+            configs.append(Q)
+
+            # update priorities & goal check
+            flg_fin = True
+            for i in range(self.N):
+                if Q[i] != self.goals[i]:
+                    flg_fin = False
+                    priorities[i] += 1
+                else:
+                    priorities[i] -= np.floor(priorities[i])
+            if flg_fin:
+                break  # goal
+
+        return configs
+
 HetConfig = tuple[int, int]
 
 
@@ -331,7 +453,10 @@ class ReservationSystem:
         self.current_state[(graph_id, node_id)] = agent_id
 
     def check_if_safe_to_proceed(self, graph_id: int, node_id: int, from_graph_id: int, from_node_id: int, next_config: list[HetConfig]) -> bool:
+        if self.next_state[(graph_id, node_id)] != self.nil:
+            return False
         to_check = self.collision_checker.get_other_blocked_nodes(graph_id, node_id)
+        print(f"Checking {to_check}")
         from_check = self.collision_checker.get_other_blocked_nodes(from_graph_id, from_node_id)
         for node in to_check:
             #simple vertex check
@@ -345,6 +470,12 @@ class ReservationSystem:
             # Check that agent does not swap with you
             if agent_id != self.nil and next_config[agent_id] in from_check:
                 return False
+
+        agent_id = self.current_state[(graph_id, node_id)]
+        # Check that agent does not swap with you
+        if agent_id != self.nil and next_config[agent_id] in from_check:
+            return False
+
 
         return True
 
@@ -503,6 +634,85 @@ class ReservationSystemHeterogenous:
                 queue.append(((next_graph_id, next_node_id), next_time))
         return reachable_destinations
 
+    def space_time_bfs_with_clearance(self, agent, start_time, does_not_block, max_look_ahead):
+        """
+        Performs space-time-BFS throught the reservation system.
+        Returns a set of trajectories and their travel times.
+        """
+        graph_id, node_id = self.state[agent, start_time]
+        graph_id = int(graph_id)
+        node_id = int(node_id)
+
+        queue = collections.deque()
+        queue.append(((graph_id, node_id), start_time, None))
+        explored = set()
+        explored.add(((graph_id, node_id), start_time))
+        parents = {}
+        parents[(graph_id, node_id), start_time] = None
+        reachable_destinations = []
+
+        while len(queue) > 0:
+            (curr_graph_id, curr_node_id), time, parent = queue.popleft()
+
+            # Add to reachable destinations if it's a valid spot
+            if time > start_time:
+                is_target = True
+                for node in does_not_block:
+                    if (curr_graph_id, curr_node_id) in self.collision_checker.get_other_blocked_nodes(*node):
+                        is_target = False
+                if is_target:
+                    path = [((curr_graph_id, curr_node_id), time)]
+                    while parent is not None:
+                        parent = parents[parent]
+                        path.append(parent)
+                    reachable_destinations.append(path)
+
+            if time >= start_time + max_look_ahead:
+                continue
+
+            # Get neighbors of the current node
+            neighbors = self.collision_checker.get_neighbours(curr_graph_id, curr_node_id)
+            # Also consider staying in the same spot
+            neighbors.append((curr_graph_id, curr_node_id))
+
+            for (next_graph_id, next_node_id) in neighbors:
+                next_time = time + 1
+                if (next_graph_id, next_node_id) in self.blocked_nodes[next_time]:
+                    continue
+
+                # Edge collision check: prevent swaps
+                # If an agent is at our destination at the current time...
+                if (next_graph_id, next_node_id) in self.blocked_nodes[time]:
+                    blocking_agent = self.blocked_nodes[time][(next_graph_id, next_node_id)]
+                    #...and they are moving to our current location at the next time...
+                    blocking_agent_next_pos = tuple(self.state[blocking_agent, next_time, :])
+                    if blocking_agent_next_pos == (curr_graph_id, curr_node_id):
+                        # Then it's a swap, so this move is invalid.
+                        continue
+
+                # These are hypothetically blocked
+                if (next_graph_id, next_node_id) in self.considering_to_block[next_time]:
+                    continue
+
+                # Edge collision check: prevent swaps
+                # If an agent is at our destination at the current time...
+                if (next_graph_id, next_node_id) in self.considering_to_block[time]:
+                    blocking_agents = self.considering_to_block[time][(next_graph_id, next_node_id)]
+                    #...and they are moving to our current location at the next time...
+                    for blocking_agent in blocking_agents:
+                        blocking_agent_next_pos = tuple(self.state[blocking_agent, next_time, :])
+                        if blocking_agent_next_pos == (curr_graph_id, curr_node_id):
+                            # Then it's a swap, so this move is invalid.
+                            continue
+
+                if ((next_graph_id, next_node_id), next_time) in explored:
+                    continue
+
+                explored.add(((next_graph_id, next_node_id), next_time))
+                queue.append(((next_graph_id, next_node_id), next_time,
+                            ((curr_graph_id, curr_node_id), time)))
+        return reachable_destinations
+
 """
 Naive multi-agent PiBT. Can deadlock in some scenarios.
 """
@@ -534,9 +744,9 @@ class PIBTFromMultiGraph:
         C = sorted(C, key=lambda u: self.collision_checker.get_distance(u[0], u[1], self.goals[i][1]))
         # vertex assignment
         for v in C:
-            if v == Q_from[i]:
-                continue
-            print(f"agent {i}, trying to move to {self.collision_checker.graphs[v[0]].row_cols[v[1]]}")
+            #if v == Q_from[i]:
+            #    continue
+            print(f"agent {i}, trying to move to {self.collision_checker.graphs[v[0]].row_cols[v[1]]} aka {v}")
             # avoid vertex collision
             if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1], Q_from[i][0], Q_from[i][1], Q_to):
                 print(f"Not safe to proceed for {i}")
@@ -551,6 +761,8 @@ class PIBTFromMultiGraph:
             # priority inheritance (j != i due to the second condition)
             found_solution = True
             agents_affected = set()
+            if len(blocking_agents) > 1:
+                return False
             for agent in blocking_agents:
                 if Q_to[agent] != self.NIL_COORD:
                     continue
@@ -567,7 +779,7 @@ class PIBTFromMultiGraph:
                     Q_to[agent] = self.NIL_COORD
                 continue
             return True
-
+        print(f"Could not secure node for agent {i}")
         # failed to secure node
         Q_to[i] = Q_from[i]
         self.reservation_system.mark_next_state(Q_from[i][0], Q_from[i][1], i)
@@ -594,7 +806,7 @@ class PIBTFromMultiGraph:
             self.reservation_system.mark_next_state(q_to[0], q_to[1], self.NIL)
         return Q_to
 
-    def run(self, max_timestep: int = 10000) -> list[HetConfig]:
+    def run(self, max_timestep: int = 10) -> list[HetConfig]:
         # define priorities
         priorities = self.collision_checker.get_initial_priorities(self.starts, self.goals)
 
@@ -620,6 +832,7 @@ class PIBTFromMultiGraph:
                     flg_fin = False
                     priorities[i] += 1
                 else:
+                    print(f"agent {i} is at goal")
                     priorities[i] -= np.floor(priorities[i])
             if flg_fin:
                 break  # goal
@@ -645,7 +858,7 @@ class PIBTFromMultiGraphWithLookAhead:
         # cache
         self.NIL = self.N  # meaning \bot
         self.NIL_COORD: HetConfig = self.collision_checker.get_null()
-        self.reservation_system = ReservationSystemHeterogenous(self.N, collision_checker, )
+        self.reservation_system = ReservationSystemHeterogenous(self.N, collision_checker)
 
         # used for tie-breaking
         self.rng = np.random.default_rng(seed)
@@ -659,7 +872,7 @@ class PIBTFromMultiGraphWithLookAhead:
         C = sorted(C, key=lambda u: self.collision_checker.get_distance(u[0], u[1], self.goals[i][1]))
         # vertex assignment
         for v in C:
-            #print(f"agent {i}, trying to move to {self.collision_checker.graphs[v[0]].}")
+            print(f"agent {i}, checking collision")
             # avoid vertex collision
             if not self.reservation_system.check_if_safe_to_proceed(v[0], v[1], Q_from[i][0], Q_from[i][1], Q_to):
                 print(f"Not safe to proceed for {i}")
@@ -708,7 +921,7 @@ class PIBTFromMultiGraphWithLookAhead:
         # perform PIBT
         A = sorted(list(range(N)), key=lambda i: priorities[i], reverse=True)
         for i in A:
-            if self.reservation_system.agent_has_allocation(i):
+            if not self.reservation_system.agent_has_allocation(i):
                 self.funcPIBT(Q_from, Q_to, i, self.collision_checker.graphs[self.agent_to_graph[i]].cell_size)
 
     def run(self, max_timestep: int = 10000) -> list[HetConfig]:
