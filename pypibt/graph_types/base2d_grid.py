@@ -12,7 +12,7 @@ class Node:
     def is_in_collision(self, other: "Node") -> bool:
         # Check if two square nodes are in collision
         return self.shape.intersects(other.shape)
-    
+
     def visualize(self, screen, color, scale=1):
         if 'pygame' not in globals():
             import pygame
@@ -176,10 +176,10 @@ class GraphOn2DPlane:
                     visited.add(neighbor)
                     queue.append((neighbor, current_distance + 1)) # Increment distance by 1 for uniform cost
 
-        return float('inf') 
+        return float('inf')
 
     def get_neighbors(self, node_index: int) -> list[int]:
         return self.neighbors[node_index]
-    
+
     def get_swept_collision(self, from_node: int, to_node: int) -> shapely.geometry.Polygon:
         pass
